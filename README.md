@@ -79,7 +79,7 @@ positional arguments:
 
 options:
   -h, --help      show this help message and exit
-  -a, --all       show all files, including ignored by git
+  -a, --all       show all files (including those ignored by Git)
   -m, --modified  show file modification times
   -s, --summary   show summary only
   -w, --width N   starting column for file metadata (default: 50)
