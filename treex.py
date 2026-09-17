@@ -115,7 +115,7 @@ def count_lines(path):
 
 
 def file_info(path):
-    """Return size, description, raw size, and modification time."""
+    """Get file info."""
     try:
         stat = path.stat()
         size = stat.st_size
@@ -152,12 +152,10 @@ def print_tree(
     except PermissionError:
         print(prefix + "└── [permission denied]")
         return stats
-    # Filter ignored entries before determining which entry is last.
-    # Exclude Git's internal repository data.
+    # Filter ignored entries and Git's internal repository data
     visible_entries = [
-        entry
-        for entry in entries
-        if entry.name != ".git" and not (gitignore and gitignore.ignored(entry))
+        entry for entry in entries
+        if not gitignore or (entry.name != ".git" and not gitignore.ignored(entry))
     ]
     # Sort directories before files, group symlinks
     # by target type, and sort names case-insensitive.
@@ -179,12 +177,12 @@ def print_tree(
             )
         elif entry.is_file():
             stats["files"] += 1
-            size, info, raw_size, modified = file_info(entry)
-            stats["total_size"] += raw_size
+            size_text, info, size, modified = file_info(entry)
+            stats["total_size"] += size
             # The complete tree/name portion is padded to the
             # specified width so metadata lines up vertically.
             tree_name = prefix + connector + entry.name
-            output = f"{tree_name:<{width}}{size:>10}    {info}"
+            output = f"{tree_name:<{width}}{size_text:>10}    {info}"
             if show_modified and modified is not None:
                 output += f"    {modified}"
             print(output)
@@ -210,18 +208,18 @@ def parse_args(argv=None):
         help="show all files, including ignored by git",
     )
     parser.add_argument(
+        "-m",
+        "--modified",
+        action="store_true",
+        help="show file modification times",
+    )
+    parser.add_argument(
         "-w",
         "--width",
         type=int,
         default=DEFAULT_METADATA_COLUMN,
         metavar="N",
         help=f"starting column for file metadata (default: {DEFAULT_METADATA_COLUMN})",
-    )
-    parser.add_argument(
-        "-m",
-        "--modified",
-        action="store_true",
-        help="show file modification times",
     )
     return parser.parse_args(argv)
 
