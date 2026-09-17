@@ -241,10 +241,9 @@ def main():
     stats = print_tree(
         path, gitignore=gitignore, width=args.width, show_modified=args.modified
     )
-    print()
     print(
-        f"{stats['directories']} directories, "
-        f"{stats['files']} files, "
+        f"\n{stats['directories']} directories • "
+        f"{stats['files']} files • "
         f"{format_size(stats['total_size'])}"
     )
     return 0
