@@ -50,7 +50,7 @@ class GitIgnore:
                 self.enabled = True
 
     def ignored(self, path):
-        """Return True if Git considers the path ignored."""
+        """Check if Git considers the path ignored."""
         if not self.enabled:
             return False
         try:
@@ -85,7 +85,7 @@ def format_modified(timestamp):
 
 
 def is_binary_file(path, chunk_size=8192):
-    """Return True if the file appears to be binary."""
+    """Check if the file appears to be binary."""
     try:
         with path.open("rb") as f:
             chunk = f.read(chunk_size)
@@ -153,15 +153,15 @@ def print_tree(
         print(prefix + "└── [permission denied]")
         return stats
     # Filter ignored entries before determining which entry is last.
-    visible_entries = []
-    for entry in entries:
-        # Git's internal repository data is never useful in the tree output.
-        if entry.name == ".git":
-            continue
-        if gitignore and gitignore.ignored(entry):
-            continue
-        visible_entries.append(entry)
-    visible_entries.sort(key=lambda p: (p.is_file(), p.name.lower()))
+    # Exclude Git's internal repository data.
+    visible_entries = [
+        entry
+        for entry in entries
+        if entry.name != ".git" and not (gitignore and gitignore.ignored(entry))
+    ]
+    # Sort directories before files, group symlinks
+    # by target type, and sort names case-insensitive.
+    visible_entries.sort(key=lambda p: (p.is_file(), p.name.casefold()))
     for index, entry in enumerate(visible_entries):
         is_last = index == len(visible_entries) - 1
         connector = "└── " if is_last else "├── "
@@ -182,7 +182,7 @@ def print_tree(
             size, info, raw_size, modified = file_info(entry)
             stats["total_size"] += raw_size
             # The complete tree/name portion is padded to the
-            # requested width so metadata lines up vertically.
+            # specified width so metadata lines up vertically.
             tree_name = prefix + connector + entry.name
             output = f"{tree_name:<{width}}{size:>10}    {info}"
             if show_modified and modified is not None:
@@ -207,7 +207,7 @@ def parse_args(argv=None):
         "-a",
         "--all",
         action="store_true",
-        help="show all files, including git-ignored",
+        help="show all files, including ignored by git",
     )
     parser.add_argument(
         "-w",
