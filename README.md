@@ -1,6 +1,6 @@
 # treex
 
-## List directory contents in a tree format with file metadata.
+## List directory contents in a tree format with file metadata
 
 - Copyright (c) 2026 [Corey Goldberg][github-profile]
 - Development: [GitHub][github-repo]
