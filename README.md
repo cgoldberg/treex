@@ -26,17 +26,12 @@ Requirements:
 
 ----
 
-# Installation
+## Installation
 
 Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
 
-```
-pip install treex-cli
-```
-
-```
-pipx install treex-cli
-```
+- `pip install treex-cli`
+- `pipx install treex-cli`
 
 ----
 
