@@ -242,13 +242,57 @@ class TestGitIgnore:
         assert gitignore.ignored(tmp_path / "file.txt") is False
 
 
+class TestPrintTree:
+    def test_prints_files_and_directories(self, tmp_path, capsys):
+        (tmp_path / "dir").mkdir()
+        (tmp_path / "file.txt").write_text("hello")
+        stats = treex.print_tree(tmp_path)
+        output = capsys.readouterr().out
+        assert "dir" in output
+        assert "file.txt" in output
+        assert stats["directories"] == 1
+        assert stats["files"] == 1
+        assert stats["total_size"] == 5
+
+    def test_summary_only_suppresses_tree(self, tmp_path, capsys):
+        (tmp_path / "file.txt").write_text("hello")
+        stats = treex.print_tree(tmp_path, show_tree=False)
+        output = capsys.readouterr().out
+        assert output == ""
+        assert stats["files"] == 1
+        assert stats["total_size"] == 5
+
+    def test_nested_directories(self, tmp_path, capsys):
+        nested = tmp_path / "one" / "two"
+        nested.mkdir(parents=True)
+        (nested / "file.txt").write_text("hello")
+        stats = treex.print_tree(tmp_path)
+        output = capsys.readouterr().out
+        assert "one" in output
+        assert "two" in output
+        assert "file.txt" in output
+        assert stats["directories"] == 2
+        assert stats["files"] == 1
+
+    def test_permission_denied(self, tmp_path, capsys):
+        directory = tmp_path / "restricted"
+        directory.mkdir()
+        with patch.object(Path, "iterdir", side_effect=PermissionError):
+            stats = treex.print_tree(directory)
+        output = capsys.readouterr().out
+        assert "[permission denied]" in output
+        assert stats["directories"] == 0
+        assert stats["files"] == 0
+
+
 class TestArgumentParsing:
     def test_defaults(self):
         args = treex.parse_args([])
         assert args.directory == Path()
         assert args.all is False
-        assert args.width == 50
         assert args.modified is False
+        assert args.summary is False
+        assert args.width == 50
 
     def test_directory(self):
         args = treex.parse_args(["/tmp/project"])
@@ -258,25 +302,31 @@ class TestArgumentParsing:
         args = treex.parse_args(["--all"])
         assert args.all is True
 
-    def test_width(self):
-        args = treex.parse_args(["--width", "100"])
-        assert args.width == 100
-
     def test_modified(self):
         args = treex.parse_args(["--modified"])
         assert args.modified is True
 
+    def test_summary(self):
+        args = treex.parse_args(["--summary"])
+        assert args.summary is True
+
+    def test_width(self):
+        args = treex.parse_args(["--width", "100"])
+        assert args.width == 100
+
     def test_all_options(self):
         args = treex.parse_args(
-            ["--all", "--width", "100", "--modified", "/tmp/project"]
+            ["--all", "--modified", "--summary", "--width", "100", "/tmp/project"]
         )
         assert args.directory == Path("/tmp/project")
         assert args.all is True
-        assert args.width == 100
         assert args.modified is True
+        assert args.summary is True
+        assert args.width == 100
 
     def test_short_options(self):
-        args = treex.parse_args(["-a", "-w", "100", "-m"])
+        args = treex.parse_args(["-a", "-m", "-s", "-w", "100"])
         assert args.all is True
-        assert args.width == 100
+        assert args.summary is True
         assert args.modified is True
+        assert args.width == 100
