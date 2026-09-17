@@ -84,6 +84,12 @@ options:
   -m, --modified  show file modification times
 ```
 
+----
+
+## Screenshot
+
+![Screenshot](https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/screenshot.png)
+
 [github-profile]: https://github.com/cgoldberg
 [github-repo]: https://github.com/cgoldberg/treex
 [pypi-home]: https://pypi.org/project/treex-cli
