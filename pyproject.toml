@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "treex-cli"
+version = "0.1.0.dev0"
+description = "Print a directory tree with file metadata"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Corey Goldberg"}]
+maintainers = [{name = "Corey Goldberg"}]
+readme = "README.md"
+requires-python = ">= 3.10"
+keywords = ["tree", "directory", "files", "cli", "metadata"]
+classifiers = [
+        "Environment :: Console",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
+]
+
+[project.scripts]
+treex = "treex:main"
+
+[project.urls]
+homepage = "https://github.com/cgoldberg/treex"
+source = "https://github.com/cgoldberg/treex"
+download = "https://pypi.org/project/treex-cli"
+
+[dependency-groups]
+dev = [
+    "tox",
+]
+lint = [
+    "ruff",
+]
+test = [
+    "pytest",
+]
+validate = [
+    "validate-pyproject[all]",
+]
+
+[tool.setuptools]
+py-modules = ["treex"]
+
+[tool.pytest]
+addopts = ["-v"]
+filterwarnings = ["default"]
+
+[tool.ruff]
+line-length = 88
+respect-gitignore = true
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN", "COM812", "D", "DTZ001", "DTZ006",
+    "FBT", "PLR", "S603", "S607", "T201"
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = ["S101", "S108"]
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 88
