@@ -138,8 +138,14 @@ def print_tree(
     gitignore=None,
     width=DEFAULT_METADATA_COLUMN,
     show_modified=False,
+    show_tree=True,
 ):
     """Recursively print the directory tree."""
+
+    def display(message):
+        if show_tree:
+            print(message)
+
     if stats is None:
         stats = {
             "directories": 0,
@@ -150,11 +156,12 @@ def print_tree(
     try:
         entries = list(path.iterdir())
     except PermissionError:
-        print(prefix + "└── [permission denied]")
+        display(prefix + "└── [permission denied]")
         return stats
     # Filter ignored entries and Git's internal repository data
     visible_entries = [
-        entry for entry in entries
+        entry
+        for entry in entries
         if not gitignore or (entry.name != ".git" and not gitignore.ignored(entry))
     ]
     # Sort directories before files, group symlinks
@@ -165,7 +172,7 @@ def print_tree(
         connector = "└── " if is_last else "├── "
         if entry.is_dir():
             stats["directories"] += 1
-            print(prefix + connector + entry.name)
+            display(f"{prefix}{connector}{entry.name}")
             extension = "    " if is_last else "│   "
             print_tree(
                 entry,
@@ -174,6 +181,7 @@ def print_tree(
                 gitignore,
                 width,
                 show_modified,
+                show_tree,
             )
         elif entry.is_file():
             stats["files"] += 1
@@ -185,7 +193,7 @@ def print_tree(
             output = f"{tree_name:<{width}}{size_text:>10}    {info}"
             if show_modified and modified is not None:
                 output += f"    {modified}"
-            print(output)
+            display(output)
     return stats
 
 
@@ -214,6 +222,12 @@ def parse_args(argv=None):
         help="show file modification times",
     )
     parser.add_argument(
+        "-s",
+        "--summary",
+        action="store_true",
+        help="show summary only",
+    )
+    parser.add_argument(
         "-w",
         "--width",
         type=int,
@@ -235,12 +249,20 @@ def main():
         return 1
     # Only initialize Git integration when it will actually be used.
     gitignore = None if args.all else GitIgnore(path)
-    print(path)
+    show_tree = not args.summary
+    if show_tree:
+        print(path)
     stats = print_tree(
-        path, gitignore=gitignore, width=args.width, show_modified=args.modified
+        path,
+        gitignore=gitignore,
+        width=args.width,
+        show_modified=args.modified,
+        show_tree=show_tree,
     )
+    if show_tree:
+        print()
     print(
-        f"\n{stats['directories']} directories • "
+        f"{stats['directories']} directories • "
         f"{stats['files']} files • "
         f"{format_size(stats['total_size'])}"
     )

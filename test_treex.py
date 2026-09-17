@@ -136,16 +136,44 @@ class TestFileInfo:
 
 
 class TestGitIgnore:
-    def test_git_internal_directory_is_skipped(self, tmp_path, capsys):
-        (tmp_path / ".git").mkdir()
+    @staticmethod
+    def init_git_repo(path):
+        subprocess.run(
+            ["git", "init"],
+            cwd=path,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
+
+    @staticmethod
+    def has_entry(output, name):
+        return any(line.strip().split()[1] == name for line in output.splitlines())
+
+    def test_enabled_hides_git_and_ignored_files(self, tmp_path, capsys):
+        self.init_git_repo(tmp_path)
+        (tmp_path / "ignored.txt").write_text("ignored")
         (tmp_path / "README.md").write_text("hello")
-        with patch("treex.GitIgnore") as mock_gitignore:
-            mock_gitignore.return_value.enabled = True
-            mock_gitignore.return_value.ignored.return_value = False
-            treex.print_tree(tmp_path)
+        (tmp_path / ".gitignore").write_text("ignored.txt\n")
+        gitignore = treex.GitIgnore(tmp_path)
+        treex.print_tree(tmp_path, gitignore=gitignore)
         output = capsys.readouterr().out
-        assert ".git" not in output
-        assert "README.md" in output
+        assert not self.has_entry(output, ".git")
+        assert self.has_entry(output, ".gitignore")
+        assert not self.has_entry(output, "ignored.txt")
+        assert self.has_entry(output, "README.md")
+
+    def test_disabled_shows_everything(self, tmp_path, capsys):
+        self.init_git_repo(tmp_path)
+        (tmp_path / "ignored.txt").write_text("ignored")
+        (tmp_path / "README.md").write_text("hello")
+        (tmp_path / ".gitignore").write_text("ignored.txt\n")
+        treex.print_tree(tmp_path, gitignore=None)
+        output = capsys.readouterr().out
+        assert self.has_entry(output, ".git")
+        assert self.has_entry(output, ".gitignore")
+        assert self.has_entry(output, "ignored.txt")
+        assert self.has_entry(output, "README.md")
 
     def test_disabled_outside_git_repository(self, tmp_path):
         gitignore = treex.GitIgnore(tmp_path)
@@ -164,20 +192,6 @@ class TestGitIgnore:
         assert gitignore.enabled is True
         assert gitignore.repo_root == tmp_path.resolve()
 
-    def test_detects_ignored_file(self, tmp_path):
-        subprocess.run(
-            ["git", "init"],
-            cwd=tmp_path,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=True,
-        )
-        (tmp_path / ".gitignore").write_text("*.log\n")
-        ignored_file = tmp_path / "debug.log"
-        ignored_file.write_text("debug output")
-        gitignore = treex.GitIgnore(tmp_path)
-        assert gitignore.ignored(ignored_file) is True
-
     def test_does_not_ignore_normal_file(self, tmp_path):
         subprocess.run(
             ["git", "init"],
@@ -192,7 +206,21 @@ class TestGitIgnore:
         gitignore = treex.GitIgnore(tmp_path)
         assert gitignore.ignored(normal_file) is False
 
-    def test_ignored_directory(self, tmp_path):
+    def test_detects_ignored_file(self, tmp_path):
+        subprocess.run(
+            ["git", "init"],
+            cwd=tmp_path,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
+        (tmp_path / ".gitignore").write_text("*.log\n")
+        ignored_file = tmp_path / "debug.log"
+        ignored_file.write_text("debug output")
+        gitignore = treex.GitIgnore(tmp_path)
+        assert gitignore.ignored(ignored_file) is True
+
+    def test_detects_ignored_directory(self, tmp_path):
         subprocess.run(
             ["git", "init"],
             cwd=tmp_path,
