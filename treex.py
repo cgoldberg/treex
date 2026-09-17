@@ -107,14 +107,11 @@ def is_binary_file(path, chunk_size=8192):
 
 def count_lines(path):
     """Count lines without loading the entire file into memory."""
-    count = 0
     try:
         with path.open("rb") as f:
-            for _ in f:
-                count += 1
+            return sum(1 for _ in f)
     except OSError:
         return None
-    return count
 
 
 def file_info(path):
@@ -244,9 +241,8 @@ def main():
     stats = print_tree(
         path, gitignore=gitignore, width=args.width, show_modified=args.modified
     )
+    print()
     print(
-        f""
-        f""
         f"{stats['directories']} directories, "
         f"{stats['files']} files, "
         f"{format_size(stats['total_size'])}"
