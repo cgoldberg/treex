@@ -138,7 +138,7 @@ def print_tree(
     gitignore=None,
     width=DEFAULT_METADATA_COLUMN,
     show_modified=False,
-    show_tree=True
+    show_tree=True,
 ):
     """Recursively print the directory tree."""
 
