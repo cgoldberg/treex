@@ -26,6 +26,37 @@ Requirements:
 
 ----
 
+## Status
+
+<table>
+  <tr>
+    <td>Latest Version</td>
+    <td>
+      <a href="https://pypi.org/project/treex-cli">
+        <img src="https://img.shields.io/pypi/v/treex-cli.svg">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td>Tests (CI)</td>
+    <td>
+      <a href="https://github.com/cgoldberg/treex/actions/workflows/test.yml">
+        <img src="https://github.com/cgoldberg/treex/actions/workflows/test.yml/badge.svg">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td>Supported Python Versions</td>
+    <td>
+      <a href="https://pypi.org/project/treex-cli">
+        <img src="https://img.shields.io/pypi/pyversions/treex-cli">
+      </a>
+    </td>
+  </tr>
+</table>
+
+----
+
 ## Installation
 
 Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
