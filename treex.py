@@ -91,7 +91,7 @@ def is_binary_file(path, chunk_size=8192):
             chunk = f.read(chunk_size)
         if not chunk:
             return False
-        # NUL bytes are a strong indication of binary data.
+        # Check for NUL bytes.
         if b"\x00" in chunk:
             return True
         # Treat files that aren't valid UTF-8 as binary.
