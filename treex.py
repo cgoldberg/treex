@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 
-"""Print a directory tree with file metadata.
+"""List directory contents in a tree-like format with file metadata.
 
 The directory tree is rendered using Unicode box-drawing characters. File names are
 displayed with their human-readable size and, optionally, modification time. Text
@@ -138,7 +138,7 @@ def print_tree(
     gitignore=None,
     width=DEFAULT_METADATA_COLUMN,
     show_modified=False,
-    show_tree=True,
+    show_tree=True
 ):
     """Recursively print the directory tree."""
 
@@ -200,7 +200,7 @@ def print_tree(
 def parse_args(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="print a directory tree with file metadata.",
+        description="List directory contents in a tree format with file metadata.",
     )
     parser.add_argument(
         "directory",

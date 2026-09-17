@@ -1,6 +1,6 @@
 # treex
 
-## Print a directory tree with file metadata
+## List directory contents in a tree format with file metadata.
 
 - Copyright (c) 2026 [Corey Goldberg][github-profile]
 - Development: [GitHub][github-repo]
@@ -70,9 +70,9 @@ Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
 
 ```
 $ treex --help
-usage: treex [-h] [-a] [-w N] [-m] [directory]
+usage: treex [-h] [-a] [-m] [-s] [-w N] [directory]
 
-print a directory tree with file metadata.
+List directory contents in a tree format with file metadata.
 
 positional arguments:
   directory       directory to scan (default: current directory)
@@ -80,8 +80,9 @@ positional arguments:
 options:
   -h, --help      show this help message and exit
   -a, --all       show all files, including ignored by git
-  -w, --width N   starting column for file metadata (default: 50)
   -m, --modified  show file modification times
+  -s, --summary   show summary only
+  -w, --width N   starting column for file metadata (default: 50)
 ```
 
 ----
