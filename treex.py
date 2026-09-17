@@ -29,13 +29,13 @@ DEFAULT_METADATA_COLUMN = 50
 
 
 class GitIgnore:
-    """Use Git's own ignore machinery when available."""
+    """Use Git's ignore rules when available."""
 
     def __init__(self, directory):
         self.directory = Path(directory).resolve()
         self.enabled = False
         self.repo_root = None
-        # Git isn't installed or can't be executed.
+        # Check Git availability and find the repository root
         with suppress(OSError):
             result = subprocess.run(
                 ["git", "rev-parse", "--show-toplevel"],
@@ -45,6 +45,7 @@ class GitIgnore:
                 text=True,
                 check=False,
             )
+            # Enable Git support if this is a repository
             if result.returncode == 0:
                 self.repo_root = Path(result.stdout.strip()).resolve()
                 self.enabled = True
@@ -80,7 +81,7 @@ def format_size(size):  # noqa: RET503
 
 
 def format_modified(timestamp):
-    """Format a modification timestamp for display."""
+    """Format a modification timestamp."""
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
 
 
@@ -158,7 +159,7 @@ def print_tree(
     except PermissionError:
         display(prefix + "└── [permission denied]")
         return stats
-    # Filter ignored entries and Git's internal repository data
+    # Filter ignored entries and Git's internal directory
     visible_entries = [
         entry
         for entry in entries
@@ -213,7 +214,7 @@ def parse_args(argv=None):
         "-a",
         "--all",
         action="store_true",
-        help="show all files, including ignored by git",
+        help="show all files (including those ignored by Git)",
     )
     parser.add_argument(
         "-m",
@@ -247,7 +248,7 @@ def main():
     if args.width < 1:
         print("Width must be greater than zero.")
         return 1
-    # Only initialize Git integration when it will actually be used.
+    # Only initialize Git support if it will be used
     gitignore = None if args.all else GitIgnore(path)
     show_tree = not args.summary
     if show_tree:
