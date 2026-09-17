@@ -4,9 +4,10 @@
 
 """Print a directory tree with file metadata.
 
-Directories are rendered using Unicode box-drawing characters, while
-files display their human-readable size and, when they are text files,
-their line count. Binary and unreadable files are identified accordingly.
+The directory tree is rendered using Unicode box-drawing characters. File names are
+displayed with their human-readable size and, optionally, modification time. Text
+files also include their line count. Binary and unreadable files are marked with
+their type.
 
 When run inside a Git repository, files and directories ignored by Git
 are automatically excluded using Git's own ignore rules. If Git is not
@@ -196,7 +197,7 @@ def print_tree(
 def parse_args(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Print a directory tree with file metadata.",
+        description="print a directory tree with file metadata.",
     )
     parser.add_argument(
         "directory",

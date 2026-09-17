@@ -2,11 +2,6 @@
 
 ## Print a directory tree with file metadata
 
-`treex` is a command-line utility (similar to [tree][tree-home]) that
-recursively scans a directory and prints a tree with file names, sizes, line
-counts, and modification times. It runs on Python, requires Git, and respects
-`.gitignore` rules.
-
 - Copyright (c) 2026 [Corey Goldberg][github-profile]
 - Development: [GitHub][github-repo]
 - Releases: [PyPI][pypi-home]
@@ -14,22 +9,44 @@ counts, and modification times. It runs on Python, requires Git, and respects
 
 ----
 
-### Installation
+## About
 
-Install the package from [PyPI][pypi-home]:
+`treex` is a command-line utility (similar to [tree][tree-home]) that recursively
+scans a directory and prints its contents as a tree using Unicode box-drawing
+characters. File names include their human-readable size and, optionally,
+modification time. Text files also include their line count, while binary and
+unreadable files are marked with their type. When Git is installed, it respects
+`.gitignore` rules.
 
-```
-pip install talend-task
-```
+Requirements:
+
+- Python 3.10+
+- Git 2.0+ (optional)
+- UTF-8-compatible terminal
+
 ----
 
-### CLI Options:
+# Installation
+
+Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
+
+```
+pip install treex-cli
+```
+
+```
+pipx install treex-cli
+```
+
+----
+
+## Usage
 
 ```
 $ treex --help
 usage: treex [-h] [-a] [-w N] [-m] [directory]
 
-Print a directory tree with file metadata.
+print a directory tree with file metadata.
 
 positional arguments:
   directory       directory to scan (default: current directory)
