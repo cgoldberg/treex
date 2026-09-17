@@ -48,7 +48,7 @@ positional arguments:
 
 options:
   -h, --help      show this help message and exit
-  -a, --all       show all files, including git-ignored
+  -a, --all       show all files, including ignored by git
   -w, --width N   starting column for file metadata (default: 50)
   -m, --modified  show file modification times
 ```
