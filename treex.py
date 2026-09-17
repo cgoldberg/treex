@@ -237,7 +237,7 @@ def main():
         return 1
     # Only initialize Git integration when it will actually be used.
     gitignore = None if args.all else GitIgnore(path)
-    print(path.resolve())
+    print(path)
     stats = print_tree(
         path, gitignore=gitignore, width=args.width, show_modified=args.modified
     )
