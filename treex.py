@@ -60,7 +60,7 @@ class GitIgnore:
             return result.returncode == 0
 
 
-def format_size(size):  # noqa: RET503
+def _format_size(size):  # noqa: RET503
     """Format bytes as a human-readable size."""
     units = ["B", "KB", "MB", "GB", "TB"]
     for unit in units:
@@ -71,12 +71,12 @@ def format_size(size):  # noqa: RET503
         size /= 1024
 
 
-def format_modified(timestamp):
+def _format_modified(timestamp):
     """Format a modification timestamp."""
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
 
 
-def is_binary_file(path, chunk_size=8192):
+def _is_binary_file(path, chunk_size=8192):
     """Check if the file appears to be binary."""
     try:
         with path.open("rb") as f:
@@ -97,7 +97,7 @@ def is_binary_file(path, chunk_size=8192):
         return True
 
 
-def count_lines(path):
+def _count_lines(path):
     """Count lines without loading the entire file into memory."""
     try:
         with path.open("rb") as f:
@@ -106,18 +106,18 @@ def count_lines(path):
         return None
 
 
-def file_info(path):
-    """Get file info."""
+def _file_metadata(path):
+    """Get file metadata."""
     try:
         stat = path.stat()
         size = stat.st_size
-        modified = format_modified(stat.st_mtime)
+        modified = _format_modified(stat.st_mtime)
     except OSError:
         return "?", "[unreadable]", 0, None
-    size_text = format_size(size)
-    if is_binary_file(path):
+    size_text = _format_size(size)
+    if _is_binary_file(path):
         return size_text, "[binary]", size, modified
-    lines = count_lines(path)
+    lines = _count_lines(path)
     if lines is None:
         return size_text, "[unreadable]", size, modified
     return size_text, f"{lines:,} lines", size, modified
@@ -173,7 +173,7 @@ def _collect_tree(
             )
         elif entry.is_file():
             stats["files"] += 1
-            size_text, info, size, modified = file_info(entry)
+            size_text, info, size, modified = _file_metadata(entry)
             stats["total_size"] += size
             timestamp = modified if show_modified else None
             rows.append((tree_name, (size_text, info, timestamp)))
@@ -266,7 +266,7 @@ def main():
     print(
         f"{stats['directories']} directories • "
         f"{stats['files']} files • "
-        f"{format_size(stats['total_size'])}"
+        f"{_format_size(stats['total_size'])}"
     )
     return 0
 

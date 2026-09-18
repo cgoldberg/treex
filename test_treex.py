@@ -14,94 +14,94 @@ import treex
 
 class TestFormatSize:
     def test_bytes(self):
-        assert treex.format_size(0) == "0 B"
-        assert treex.format_size(512) == "512 B"
-        assert treex.format_size(1023) == "1023 B"
+        assert treex._format_size(0) == "0 B"
+        assert treex._format_size(512) == "512 B"
+        assert treex._format_size(1023) == "1023 B"
 
     def test_kilobytes(self):
-        assert treex.format_size(1024) == "1.0 KB"
-        assert treex.format_size(1536) == "1.5 KB"
+        assert treex._format_size(1024) == "1.0 KB"
+        assert treex._format_size(1536) == "1.5 KB"
 
     def test_megabytes(self):
-        assert treex.format_size(1024 * 1024) == "1.0 MB"
-        assert treex.format_size(5 * 1024 * 1024) == "5.0 MB"
+        assert treex._format_size(1024 * 1024) == "1.0 MB"
+        assert treex._format_size(5 * 1024 * 1024) == "5.0 MB"
 
     def test_gigabytes(self):
-        assert treex.format_size(1024**3) == "1.0 GB"
+        assert treex._format_size(1024**3) == "1.0 GB"
 
     def test_large_values(self):
-        assert treex.format_size(1024**4) == "1.0 TB"
+        assert treex._format_size(1024**4) == "1.0 TB"
 
 
 class TestFormatModified:
     def test_timestamp(self):
         timestamp = datetime(2026, 9, 16, 14, 32).timestamp()
-        assert treex.format_modified(timestamp) == "2026-09-16 14:32"
+        assert treex._format_modified(timestamp) == "2026-09-16 14:32"
 
 
 class TestIsBinaryFile:
     def test_empty_file_is_not_binary(self, tmp_path):
         path = tmp_path / "empty"
         path.write_bytes(b"")
-        assert treex.is_binary_file(path) is False
+        assert treex._is_binary_file(path) is False
 
     def test_text_file_is_not_binary(self, tmp_path):
         path = tmp_path / "hello.txt"
         path.write_text("Hello, world!\nThis is text.\n")
-        assert treex.is_binary_file(path) is False
+        assert treex._is_binary_file(path) is False
 
     def test_utf8_file_is_not_binary(self, tmp_path):
         path = tmp_path / "unicode.txt"
         path.write_text("Hello 🌎\nCafé\n日本語\n")
-        assert treex.is_binary_file(path) is False
+        assert treex._is_binary_file(path) is False
 
     def test_null_byte_is_binary(self, tmp_path):
         path = tmp_path / "binary"
         path.write_bytes(b"hello\x00world")
 
-        assert treex.is_binary_file(path) is True
+        assert treex._is_binary_file(path) is True
 
     def test_invalid_utf8_is_binary(self, tmp_path):
         path = tmp_path / "binary"
         path.write_bytes(b"\xff\xfe\xfd")
-        assert treex.is_binary_file(path) is True
+        assert treex._is_binary_file(path) is True
 
     def test_missing_file_is_binary(self, tmp_path):
         path = tmp_path / "does-not-exist"
-        assert treex.is_binary_file(path) is True
+        assert treex._is_binary_file(path) is True
 
 
 class TestCountLines:
     def test_empty_file(self, tmp_path):
         path = tmp_path / "empty"
         path.write_bytes(b"")
-        assert treex.count_lines(path) == 0
+        assert treex._count_lines(path) == 0
 
     def test_single_line_with_newline(self, tmp_path):
         path = tmp_path / "file.txt"
         path.write_text("hello\n")
-        assert treex.count_lines(path) == 1
+        assert treex._count_lines(path) == 1
 
     def test_multiple_lines(self, tmp_path):
         path = tmp_path / "file.txt"
         path.write_text("one\ntwo\nthree\n")
-        assert treex.count_lines(path) == 3
+        assert treex._count_lines(path) == 3
 
     def test_last_line_without_newline(self, tmp_path):
         path = tmp_path / "file.txt"
         path.write_text("one\ntwo\nthree")
-        assert treex.count_lines(path) == 3
+        assert treex._count_lines(path) == 3
 
     def test_missing_file(self, tmp_path):
         path = tmp_path / "does-not-exist"
-        assert treex.count_lines(path) is None
+        assert treex._count_lines(path) is None
 
 
-class TestFileInfo:
+class TestFileMetadata:
     def test_text_file(self, tmp_path):
         path = tmp_path / "file.txt"
         path.write_text("one\ntwo\nthree\n")
-        size, info, raw_size, modified = treex.file_info(path)
+        size, info, raw_size, modified = treex._file_metadata(path)
         assert size == "14 B"
         assert info == "3 lines"
         assert raw_size == 14
@@ -111,7 +111,7 @@ class TestFileInfo:
         path = tmp_path / "image.bin"
         contents = b"\x00\x01\x02\x03"
         path.write_bytes(contents)
-        size, info, raw_size, modified = treex.file_info(path)
+        size, info, raw_size, modified = treex._file_metadata(path)
         assert size == "4 B"
         assert info == "[binary]"
         assert raw_size == 4
@@ -120,7 +120,7 @@ class TestFileInfo:
     def test_empty_file(self, tmp_path):
         path = tmp_path / "empty.txt"
         path.write_bytes(b"")
-        size, info, raw_size, modified = treex.file_info(path)
+        size, info, raw_size, modified = treex._file_metadata(path)
         assert size == "0 B"
         assert info == "0 lines"
         assert raw_size == 0
@@ -128,7 +128,7 @@ class TestFileInfo:
 
     def test_missing_file(self, tmp_path):
         path = tmp_path / "missing.txt"
-        size, info, raw_size, modified = treex.file_info(path)
+        size, info, raw_size, modified = treex._file_metadata(path)
         assert size == "?"
         assert info == "[unreadable]"
         assert raw_size == 0
@@ -334,7 +334,7 @@ class TestPrintTree:
         assert stats["files"] == 0
         assert stats["total_size"] == 0
 
-    def test_tree_name_width_aligns_file_information(self, tmp_path, capsys):
+    def test_tree_name_width_aligns_file_metadata(self, tmp_path, capsys):
         (tmp_path / "a.txt").write_text("hello")
         (tmp_path / "long_filename.txt").write_text("hello")
         treex.print_tree(tmp_path)
