@@ -284,6 +284,65 @@ class TestPrintTree:
         assert stats["directories"] == 0
         assert stats["files"] == 0
 
+    def test_tree_entries_sorted_with_directories_first(self, tmp_path):
+        (tmp_path / "zebra.txt").touch()
+        (tmp_path / "Alpha.txt").touch()
+        (tmp_path / "src").mkdir()
+        (tmp_path / "Docs").mkdir()
+        (tmp_path / ".git").mkdir()
+        entries = treex._get_tree_entries(tmp_path, gitignore=None)
+        assert [entry.name for entry in entries] == [
+            ".git",
+            "Docs",
+            "src",
+            "Alpha.txt",
+            "zebra.txt",
+        ]
+
+    def test_tree_entries_excludes_symlinks(self, tmp_path):
+        target = tmp_path / "target.txt"
+        target.touch()
+        link = tmp_path / "link.txt"
+        link.symlink_to(target)
+        entries = treex._get_tree_entries(tmp_path, gitignore=None)
+        assert [entry.name for entry in entries] == ["target.txt"]
+
+    def test_collect_tree(self, tmp_path):
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "main.py").write_text("print('hello')\n")
+        (tmp_path / "README.md").write_text("# README\n")
+        stats = {"directories": 0, "files": 0, "total_size": 0}
+        rows = []
+        treex._collect_tree(tmp_path, "", stats, None, rows, False)
+        assert [row[0] for row in rows] == [
+            "├── src",
+            "│   └── main.py",
+            "└── README.md",
+        ]
+        assert stats["directories"] == 1
+        assert stats["files"] == 2
+        assert stats["total_size"] == (len("print('hello')\n") + len("# README\n"))
+
+    def test_collect_tree_permission_denied(self, tmp_path):
+        rows = []
+        stats = {"directories": 0, "files": 0, "total_size": 0}
+
+        with patch.object(Path, "iterdir", side_effect=PermissionError):
+            treex._collect_tree(tmp_path, "", stats, None, rows, False)
+        assert rows == [("└── [permission denied]", None)]
+        assert stats["directories"] == 0
+        assert stats["files"] == 0
+        assert stats["total_size"] == 0
+
+    def test_tree_name_width_aligns_file_information(self, tmp_path, capsys):
+        (tmp_path / "a.txt").write_text("hello")
+        (tmp_path / "long_filename.txt").write_text("hello")
+        treex.print_tree(tmp_path)
+        lines = capsys.readouterr().out.splitlines()
+        size_positions = [line.index("5 B") for line in lines if ".txt" in line]
+        assert len(size_positions) == 2
+        assert size_positions[0] == size_positions[1]
+
 
 class TestArgumentParsing:
     def test_defaults(self):
@@ -292,7 +351,6 @@ class TestArgumentParsing:
         assert args.all is False
         assert args.modified is False
         assert args.summary is False
-        assert args.width == 50
 
     def test_directory(self):
         args = treex.parse_args(["/tmp/project"])
@@ -310,23 +368,15 @@ class TestArgumentParsing:
         args = treex.parse_args(["--summary"])
         assert args.summary is True
 
-    def test_width(self):
-        args = treex.parse_args(["--width", "100"])
-        assert args.width == 100
-
     def test_all_options(self):
-        args = treex.parse_args(
-            ["--all", "--modified", "--summary", "--width", "100", "/tmp/project"]
-        )
+        args = treex.parse_args(["--all", "--modified", "--summary", "/tmp/project"])
         assert args.directory == Path("/tmp/project")
         assert args.all is True
         assert args.modified is True
         assert args.summary is True
-        assert args.width == 100
 
     def test_short_options(self):
-        args = treex.parse_args(["-a", "-m", "-s", "-w", "100"])
+        args = treex.parse_args(["-a", "-m", "-s"])
         assert args.all is True
         assert args.summary is True
         assert args.modified is True
-        assert args.width == 100

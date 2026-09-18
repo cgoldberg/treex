@@ -2,21 +2,14 @@
 # SPDX-License-Identifier: MIT
 
 
-"""List directory contents in a tree-like format with file metadata.
+"""List directory contents as a tree with file metadata.
 
-The directory tree is rendered using Unicode box-drawing characters. File names are
-displayed with their human-readable size and, optionally, modification time. Text
-files also include their line count. Binary and unreadable files are marked with
-their type.
+The directory tree is rendered using Unicode box-drawing characters.
 
 When run inside a Git repository, files and directories ignored by Git
 are automatically excluded using Git's own ignore rules. If Git is not
 installed, or the directory is not part of a Git repository, the
 filesystem is scanned normally without Git filtering.
-
-Use --all to disable Git ignore filtering and show all files.
-Use --width to control the column at which file metadata starts.
-Use --modified to show file modification times.
 """
 
 import argparse
@@ -24,8 +17,6 @@ import subprocess
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
-
-DEFAULT_METADATA_COLUMN = 50
 
 
 class GitIgnore:
@@ -132,76 +123,98 @@ def file_info(path):
     return size_text, f"{lines:,} lines", size, modified
 
 
-def print_tree(
-    directory,
-    prefix="",
-    stats=None,
-    gitignore=None,
-    width=DEFAULT_METADATA_COLUMN,
-    show_modified=False,
-    show_tree=True,
-):
-    """Recursively print the directory tree."""
-
-    def display(message):
-        if show_tree:
-            print(message)
-
-    if stats is None:
-        stats = {
-            "directories": 0,
-            "files": 0,
-            "total_size": 0,
-        }
-    path = Path(directory)
+def _get_tree_entries(path, gitignore):
+    """Get entries to include in the tree."""
     try:
         entries = list(path.iterdir())
     except PermissionError:
-        display(prefix + "└── [permission denied]")
-        return stats
+        return None
     # Filter ignored entries and Git's internal directory
-    visible_entries = [
+    entries = [
         entry
         for entry in entries
-        if not gitignore or (entry.name != ".git" and not gitignore.ignored(entry))
+        if not entry.is_symlink()
+        and (not gitignore or (entry.name != ".git" and not gitignore.ignored(entry)))
     ]
-    # Sort directories before files, group symlinks
-    # by target type, and sort names case-insensitive.
-    visible_entries.sort(key=lambda p: (p.is_file(), p.name.casefold()))
-    for index, entry in enumerate(visible_entries):
-        is_last = index == len(visible_entries) - 1
+    # Group directories first and sort names case-insensitive
+    entries.sort(key=lambda p: (p.is_file(), p.name.casefold()))
+    return entries
+
+
+def _collect_tree(
+    path,
+    prefix,
+    stats,
+    gitignore,
+    rows,
+    show_modified,
+):
+    """Walk the tree once and collect the output rows."""
+    entries = _get_tree_entries(path, gitignore)
+    if entries is None:
+        rows.append((prefix + "└── [permission denied]", None))
+        return
+    for index, entry in enumerate(entries):
+        is_last = index == len(entries) - 1
         connector = "└── " if is_last else "├── "
+        tree_name = prefix + connector + entry.name
         if entry.is_dir():
             stats["directories"] += 1
-            display(f"{prefix}{connector}{entry.name}")
+            rows.append((tree_name, None))
+            # Indent nested entries, preserving the tree's vertical branch
             extension = "    " if is_last else "│   "
-            print_tree(
+            _collect_tree(
                 entry,
                 prefix + extension,
                 stats,
                 gitignore,
-                width,
+                rows,
                 show_modified,
-                show_tree,
             )
         elif entry.is_file():
             stats["files"] += 1
             size_text, info, size, modified = file_info(entry)
             stats["total_size"] += size
-            # The complete tree/name portion is padded to the
-            # specified width so metadata lines up vertically.
-            tree_name = prefix + connector + entry.name
-            output = f"{tree_name:<{width}}{size_text:>10}    {info}"
-            if show_modified and modified is not None:
+            timestamp = modified if show_modified else None
+            rows.append((tree_name, (size_text, info, timestamp)))
+
+
+def print_tree(
+    directory,
+    prefix="",
+    stats=None,
+    gitignore=None,
+    show_modified=False,
+    show_tree=True,
+):
+    """Print the directory tree with aligned file metadata."""
+    if stats is None:
+        stats = {"directories": 0, "files": 0, "total_size": 0}
+    rows = []
+    # Walk the filesystem once and collect the output
+    _collect_tree(Path(directory), prefix, stats, gitignore, rows, show_modified)
+    if show_tree:
+        # Align file metadata with the longest tree/name
+        max_tree_name_width = max(
+            (len(tree_name) for tree_name, _ in rows),
+            default=0,
+        )
+        for tree_name, file_info_data in rows:
+            if file_info_data is None:
+                print(tree_name)
+                continue
+            size_text, info, modified = file_info_data
+            output = f"{tree_name:<{max_tree_name_width}}{size_text:>10}    {info:<10}"
+            if modified is not None:
                 output += f"    {modified}"
-            display(output)
+            print(output)
     return stats
 
 
 def parse_args(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="List directory contents in a tree format with file metadata.",
+        description="List directory contents as a tree with file metadata.",
     )
     parser.add_argument(
         "directory",
@@ -228,14 +241,6 @@ def parse_args(argv=None):
         action="store_true",
         help="show summary only",
     )
-    parser.add_argument(
-        "-w",
-        "--width",
-        type=int,
-        default=DEFAULT_METADATA_COLUMN,
-        metavar="N",
-        help=f"starting column for file metadata (default: {DEFAULT_METADATA_COLUMN})",
-    )
     return parser.parse_args(argv)
 
 
@@ -245,9 +250,6 @@ def main():
     if not path.is_dir():
         print(f"Not a directory: {path}")
         return 1
-    if args.width < 1:
-        print("Width must be greater than zero.")
-        return 1
     # Only initialize Git support if it will be used
     gitignore = None if args.all else GitIgnore(path)
     show_tree = not args.summary
@@ -256,7 +258,6 @@ def main():
     stats = print_tree(
         path,
         gitignore=gitignore,
-        width=args.width,
         show_modified=args.modified,
         show_tree=show_tree,
     )

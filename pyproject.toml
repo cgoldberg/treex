@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "treex-cli"
 version = "0.1.2.dev0"
-description="List directory contents in a tree format with file metadata."
+description="List directory contents as a tree with file metadata"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "Corey Goldberg"}]
@@ -68,7 +68,7 @@ ignore = [
 fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
-"**/test_*.py" = ["S101", "S108"]
+"**/test_*.py" = ["S101", "S108", "SLF001"]
 
 [tool.ruff.format]
 docstring-code-format = true

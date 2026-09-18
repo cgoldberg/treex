@@ -1,6 +1,6 @@
 # treex
 
-## List directory contents in a tree format with file metadata
+## List directory contents as a tree with file metadata
 
 - Copyright (c) 2026 [Corey Goldberg][github-profile]
 - Development: [GitHub][github-repo]
@@ -11,18 +11,14 @@
 
 ## About
 
-`treex` is a command-line utility (similar to [tree][tree-home]) that recursively
-scans a directory and prints its contents as a tree using Unicode box-drawing
-characters. File names include their human-readable size and, optionally,
-modification time. Text files also include their line count, while binary and
-unreadable files are marked with their type. When Git is installed, it respects
-`.gitignore` rules.
+`treex` is a command-line utility that recursively scans a directory and
+displays its contents as a tree along with file metadata.
 
-Requirements:
-
-- Python 3.10+
-- Git 2.0+ (optional)
-- UTF-8-compatible terminal
+- File names show human-readable sizes
+- Text files show line counts
+- Binary and unreadable files show their type
+- Modification timestamps are optional
+- Respects `.gitignore` rules when Git is installed
 
 ----
 
@@ -57,6 +53,14 @@ Requirements:
 
 ----
 
+## Requirements
+
+- Python 3.10+
+- Git 2.0+ (optional)
+- UTF-8-compatible terminal
+
+----
+
 ## Installation
 
 Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
@@ -70,9 +74,9 @@ Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
 
 ```
 $ treex --help
-usage: treex [-h] [-a] [-m] [-s] [-w N] [directory]
+usage: treex [-h] [-a] [-m] [-s] [directory]
 
-List directory contents in a tree format with file metadata.
+List directory contents as a tree with file metadata.
 
 positional arguments:
   directory       directory to scan (default: current directory)
@@ -82,7 +86,6 @@ options:
   -a, --all       show all files (including those ignored by Git)
   -m, --modified  show file modification times
   -s, --summary   show summary only
-  -w, --width N   starting column for file metadata (default: 50)
 ```
 
 ----
@@ -95,4 +98,3 @@ options:
 [github-repo]: https://github.com/cgoldberg/treex
 [pypi-home]: https://pypi.org/project/treex-cli
 [mit-license]: https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/LICENSE
-[tree-home]: https://oldmanprogrammer.net/source.php?dir=projects/tree
