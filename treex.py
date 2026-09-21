@@ -147,6 +147,7 @@ def _collect_tree(
     stats,
     gitignore,
     rows,
+    show_metadata,
     show_modified,
 ):
     """Walk the tree once and collect the output rows."""
@@ -169,22 +170,29 @@ def _collect_tree(
                 stats,
                 gitignore,
                 rows,
+                show_metadata,
                 show_modified,
             )
         elif entry.is_file():
             stats["files"] += 1
-            size_text, info, size, modified = _file_metadata(entry)
-            stats["total_size"] += size
-            timestamp = modified if show_modified else None
-            rows.append((tree_name, (size_text, info, timestamp)))
+            if show_metadata:
+                size_text, info, size, modified = _file_metadata(entry)
+                stats["total_size"] += size
+                timestamp = modified if show_modified else None
+                rows.append((tree_name, (size_text, info, timestamp)))
+            else:
+                stats["total_size"] = None
+                rows.append((tree_name, None))
 
 
 def print_summary(stats):
-    print(
-        f"{stats['directories']:,} directories • "
-        f"{stats['files']:,} files • "
-        f"{_format_size(stats['total_size'])}"
-    )
+    directories = stats["directories"]
+    files = stats["files"]
+    total_size = stats["total_size"]
+    summary = f"{directories:,} directories • {files:,} files"
+    if total_size:
+        summary += f" • {_format_size(total_size)}"
+    print(summary)
 
 
 def print_tree(
@@ -192,6 +200,7 @@ def print_tree(
     prefix="",
     stats=None,
     gitignore=None,
+    show_metadata=True,
     show_modified=False,
     show_tree=True,
 ):
@@ -200,7 +209,15 @@ def print_tree(
         stats = {"directories": 0, "files": 0, "total_size": 0}
     rows = []
     # Walk the filesystem once and collect the output
-    _collect_tree(Path(directory), prefix, stats, gitignore, rows, show_modified)
+    _collect_tree(
+        Path(directory),
+        prefix,
+        stats,
+        gitignore,
+        rows,
+        show_metadata,
+        show_modified,
+    )
     if show_tree:
         # Align file metadata with the longest tree/name
         max_tree_name_width = max(
@@ -244,6 +261,12 @@ def parse_args(argv=None):
         help="show file modification times",
     )
     parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="don't show file metadata",
+    )
+    parser.add_argument(
         "-s",
         "--summary",
         action="store_true",
@@ -261,11 +284,13 @@ def main():
     # Only initialize Git support if it will be used
     gitignore = None if args.all else GitIgnore(path)
     show_tree = not args.summary
+    show_metadata = not args.quiet
     if show_tree:
         print(path)
     stats = print_tree(
         path,
         gitignore=gitignore,
+        show_metadata=show_metadata,
         show_modified=args.modified,
         show_tree=show_tree,
     )
