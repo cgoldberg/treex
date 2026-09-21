@@ -5,9 +5,12 @@
 """Tests for treex."""
 
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 import treex
 
@@ -298,6 +301,7 @@ class TestPrintTree:
             "zebra.txt",
         ]
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Not supported on Windows")
     def test_tree_entries_excludes_symlinks(self, tmp_path):
         target = tmp_path / "target.txt"
         target.touch()
