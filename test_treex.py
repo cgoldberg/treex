@@ -344,6 +344,28 @@ class TestPrintTree:
         assert size_positions[0] == size_positions[1]
 
 
+class TestPrintSummary:
+    def test_print_summary(self, capsys):
+        stats = {
+            "directories": 1234,
+            "files": 5678,
+            "total_size": 1234567,
+        }
+        treex.print_summary(stats)
+        output = capsys.readouterr().out
+        assert output == "1,234 directories • 5,678 files • 1.2 MB\n"
+
+    def test_print_summary_small_values(self, capsys):
+        stats = {
+            "directories": 2,
+            "files": 15,
+            "total_size": 500,
+        }
+        treex.print_summary(stats)
+        output = capsys.readouterr().out
+        assert output == "2 directories • 15 files • 500 B\n"
+
+
 class TestArgumentParsing:
     def test_defaults(self):
         args = treex.parse_args([])

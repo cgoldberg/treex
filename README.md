@@ -14,10 +14,10 @@
 `treex` is a command-line utility that recursively scans a directory and
 displays its contents as a tree along with file metadata.
 
-- File names show human-readable sizes
-- Text files show line counts
-- Binary and unreadable files show their type
-- Modification timestamps are optional
+- Displays human-readable file sizes
+- Shows line counts for text files
+- Identifies binary and unreadable files by type
+- Optionally displays modification timestamps
 - Respects `.gitignore` rules when Git is installed
 
 ----

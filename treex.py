@@ -179,6 +179,14 @@ def _collect_tree(
             rows.append((tree_name, (size_text, info, timestamp)))
 
 
+def print_summary(stats):
+    print(
+        f"{stats['directories']:,} directories • "
+        f"{stats['files']:,} files • "
+        f"{_format_size(stats['total_size'])}"
+    )
+
+
 def print_tree(
     directory,
     prefix="",
@@ -263,11 +271,7 @@ def main():
     )
     if show_tree:
         print()
-    print(
-        f"{stats['directories']} directories • "
-        f"{stats['files']} files • "
-        f"{_format_size(stats['total_size'])}"
-    )
+    print_summary(stats)
     return 0
 
 
