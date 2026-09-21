@@ -256,13 +256,21 @@ class TestPrintTree:
         assert stats["files"] == 1
         assert stats["total_size"] == 5
 
-    def test_summary_only_suppresses_tree(self, tmp_path, capsys):
+    def test_suppress_tree(self, tmp_path, capsys):
         (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
         stats = treex.print_tree(tmp_path, show_tree=False)
         output = capsys.readouterr().out
         assert output == ""
         assert stats["files"] == 1
         assert stats["total_size"] == 5
+
+    def test_suppress_metadata(self, tmp_path, capsys):
+        (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
+        stats = treex.print_tree(tmp_path, show_metadata=False)
+        output = capsys.readouterr().out
+        assert output.strip().endswith("file.txt")
+        assert stats["files"] == 1
+        assert stats["total_size"] is None
 
     def test_nested_directories(self, tmp_path, capsys):
         nested = tmp_path / "one" / "two"
@@ -286,6 +294,17 @@ class TestPrintTree:
         assert stats["directories"] == 0
         assert stats["files"] == 0
 
+    def test_tree_name_width_aligns_file_metadata(self, tmp_path, capsys):
+        (tmp_path / "a.txt").write_text("hello", encoding="utf-8")
+        (tmp_path / "long_filename.txt").write_text("hello", encoding="utf-8")
+        treex.print_tree(tmp_path)
+        lines = capsys.readouterr().out.splitlines()
+        size_positions = [line.index("5 B") for line in lines if ".txt" in line]
+        assert len(size_positions) == 2
+        assert size_positions[0] == size_positions[1]
+
+
+class TestTreeEntries:
     def test_tree_entries_sorted_with_directories_first(self, tmp_path):
         (tmp_path / "zebra.txt").touch()
         (tmp_path / "Alpha.txt").touch()
@@ -310,13 +329,15 @@ class TestPrintTree:
         entries = treex._get_tree_entries(tmp_path, gitignore=None)
         assert [entry.name for entry in entries] == ["target.txt"]
 
+
+class TestCollectTree:
     def test_collect_tree(self, tmp_path):
         (tmp_path / "src").mkdir()
         (tmp_path / "src" / "main.py").write_bytes(b"print('hello')\n")
         (tmp_path / "README.md").write_bytes(b"# README\n")
         stats = {"directories": 0, "files": 0, "total_size": 0}
         rows = []
-        treex._collect_tree(tmp_path, "", stats, None, rows, False)
+        treex._collect_tree(tmp_path, "", stats, None, rows, True, False)
         assert [row[0] for row in rows] == [
             "├── src",
             "│   └── main.py",
@@ -326,25 +347,32 @@ class TestPrintTree:
         assert stats["files"] == 2
         assert stats["total_size"] == (len("print('hello')\n") + len("# README\n"))
 
+    def test_collect_tree_without_metadata(self, tmp_path):
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "main.py").write_bytes(b"print('hello')\n")
+        (tmp_path / "README.md").write_bytes(b"# README\n")
+        stats = {"directories": 0, "files": 0, "total_size": 0}
+        rows = []
+        treex._collect_tree(tmp_path, "", stats, None, rows, False, False)
+        assert [row[0] for row in rows] == [
+            "├── src",
+            "│   └── main.py",
+            "└── README.md",
+        ]
+        assert stats["directories"] == 1
+        assert stats["files"] == 2
+        assert stats["total_size"] is None
+
     def test_collect_tree_permission_denied(self, tmp_path):
         rows = []
         stats = {"directories": 0, "files": 0, "total_size": 0}
 
         with patch.object(Path, "iterdir", side_effect=PermissionError):
-            treex._collect_tree(tmp_path, "", stats, None, rows, False)
+            treex._collect_tree(tmp_path, "", stats, None, rows, True, False)
         assert rows == [("└── [permission denied]", None)]
         assert stats["directories"] == 0
         assert stats["files"] == 0
         assert stats["total_size"] == 0
-
-    def test_tree_name_width_aligns_file_metadata(self, tmp_path, capsys):
-        (tmp_path / "a.txt").write_text("hello", encoding="utf-8")
-        (tmp_path / "long_filename.txt").write_text("hello", encoding="utf-8")
-        treex.print_tree(tmp_path)
-        lines = capsys.readouterr().out.splitlines()
-        size_positions = [line.index("5 B") for line in lines if ".txt" in line]
-        assert len(size_positions) == 2
-        assert size_positions[0] == size_positions[1]
 
 
 class TestPrintSummary:
@@ -368,6 +396,16 @@ class TestPrintSummary:
         output = capsys.readouterr().out
         assert output == "2 directories • 15 files • 500 B\n"
 
+    def test_print_summary_with_metadata_suppressed(self, capsys):
+        stats = {
+            "directories": 1234,
+            "files": 5678,
+            "total_size": None,
+        }
+        treex.print_summary(stats)
+        output = capsys.readouterr().out
+        assert output == "1,234 directories • 5,678 files\n"
+
 
 class TestArgumentParsing:
     def test_defaults(self):
@@ -375,6 +413,7 @@ class TestArgumentParsing:
         assert args.directory == Path()
         assert args.all is False
         assert args.modified is False
+        assert args.quiet is False
         assert args.summary is False
 
     def test_directory(self):
@@ -389,19 +428,33 @@ class TestArgumentParsing:
         args = treex.parse_args(["--modified"])
         assert args.modified is True
 
+    def test_quiet(self):
+        args = treex.parse_args(["--quiet"])
+        assert args.quiet is True
+
     def test_summary(self):
         args = treex.parse_args(["--summary"])
         assert args.summary is True
 
     def test_all_options(self):
-        args = treex.parse_args(["--all", "--modified", "--summary", "/tmp/project"])
+        args = treex.parse_args(
+            [
+                "--all",
+                "--modified",
+                "--quiet",
+                "--summary",
+                "/tmp/project",
+            ]
+        )
         assert args.directory == Path("/tmp/project")
         assert args.all is True
         assert args.modified is True
+        assert args.quiet is True
         assert args.summary is True
 
     def test_short_options(self):
-        args = treex.parse_args(["-a", "-m", "-s"])
+        args = treex.parse_args(["-a", "-m", "-q", "-s"])
         assert args.all is True
-        assert args.summary is True
         assert args.modified is True
+        assert args.quiet is True
+        assert args.summary is True

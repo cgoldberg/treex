@@ -74,7 +74,7 @@ Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
 
 ```
 $ treex --help
-usage: treex [-h] [-a] [-m] [-s] [directory]
+usage: treex [-h] [-a] [-m] [-q] [-s] [directory]
 
 List directory contents as a tree with file metadata.
 
@@ -85,6 +85,7 @@ options:
   -h, --help      show this help message and exit
   -a, --all       show all files (including those ignored by Git)
   -m, --modified  show file modification times
+  -q, --quiet     don't show file metadata
   -s, --summary   show summary only
 ```
 
