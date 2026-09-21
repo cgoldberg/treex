@@ -99,7 +99,7 @@ class TestCountLines:
 class TestFileMetadata:
     def test_text_file(self, tmp_path):
         path = tmp_path / "file.txt"
-        path.write_text("one\ntwo\nthree\n", encoding="utf-8")
+        path.write_bytes(b"one\ntwo\nthree\n")
         size, info, raw_size, modified = treex._file_metadata(path)
         assert size == "14 B"
         assert info == "3 lines"
