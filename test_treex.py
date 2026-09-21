@@ -47,18 +47,17 @@ class TestIsBinaryFile:
 
     def test_text_file_is_not_binary(self, tmp_path):
         path = tmp_path / "hello.txt"
-        path.write_text("Hello, world!\nThis is text.\n")
+        path.write_text("Hello, world!\nThis is text.\n", encoding="utf-8")
         assert treex._is_binary_file(path) is False
 
     def test_utf8_file_is_not_binary(self, tmp_path):
         path = tmp_path / "unicode.txt"
-        path.write_text("Hello 🌎\nCafé\n日本語\n")
+        path.write_text("Hello 🌎\nCafé\n日本語\n", encoding="utf-8")
         assert treex._is_binary_file(path) is False
 
     def test_null_byte_is_binary(self, tmp_path):
         path = tmp_path / "binary"
         path.write_bytes(b"hello\x00world")
-
         assert treex._is_binary_file(path) is True
 
     def test_invalid_utf8_is_binary(self, tmp_path):
@@ -79,17 +78,17 @@ class TestCountLines:
 
     def test_single_line_with_newline(self, tmp_path):
         path = tmp_path / "file.txt"
-        path.write_text("hello\n")
+        path.write_text("hello\n", encoding="utf-8")
         assert treex._count_lines(path) == 1
 
     def test_multiple_lines(self, tmp_path):
         path = tmp_path / "file.txt"
-        path.write_text("one\ntwo\nthree\n")
+        path.write_text("one\ntwo\nthree\n", encoding="utf-8")
         assert treex._count_lines(path) == 3
 
     def test_last_line_without_newline(self, tmp_path):
         path = tmp_path / "file.txt"
-        path.write_text("one\ntwo\nthree")
+        path.write_text("one\ntwo\nthree", encoding="utf-8")
         assert treex._count_lines(path) == 3
 
     def test_missing_file(self, tmp_path):
@@ -100,7 +99,7 @@ class TestCountLines:
 class TestFileMetadata:
     def test_text_file(self, tmp_path):
         path = tmp_path / "file.txt"
-        path.write_text("one\ntwo\nthree\n")
+        path.write_text("one\ntwo\nthree\n", encoding="utf-8")
         size, info, raw_size, modified = treex._file_metadata(path)
         assert size == "14 B"
         assert info == "3 lines"
@@ -152,9 +151,9 @@ class TestGitIgnore:
 
     def test_enabled_hides_git_and_ignored_files(self, tmp_path, capsys):
         self.init_git_repo(tmp_path)
-        (tmp_path / "ignored.txt").write_text("ignored")
-        (tmp_path / "README.md").write_text("hello")
-        (tmp_path / ".gitignore").write_text("ignored.txt\n")
+        (tmp_path / "ignored.txt").write_text("ignored", encoding="utf-8")
+        (tmp_path / "README.md").write_text("hello", encoding="utf-8")
+        (tmp_path / ".gitignore").write_text("ignored.txt\n", encoding="utf-8")
         gitignore = treex.GitIgnore(tmp_path)
         treex.print_tree(tmp_path, gitignore=gitignore)
         output = capsys.readouterr().out
@@ -165,9 +164,9 @@ class TestGitIgnore:
 
     def test_disabled_shows_everything(self, tmp_path, capsys):
         self.init_git_repo(tmp_path)
-        (tmp_path / "ignored.txt").write_text("ignored")
-        (tmp_path / "README.md").write_text("hello")
-        (tmp_path / ".gitignore").write_text("ignored.txt\n")
+        (tmp_path / "ignored.txt").write_text("ignored", encoding="utf-8")
+        (tmp_path / "README.md").write_text("hello", encoding="utf-8")
+        (tmp_path / ".gitignore").write_text("ignored.txt\n", encoding="utf-8")
         treex.print_tree(tmp_path, gitignore=None)
         output = capsys.readouterr().out
         assert self.has_entry(output, ".git")
@@ -200,9 +199,9 @@ class TestGitIgnore:
             stderr=subprocess.DEVNULL,
             check=True,
         )
-        (tmp_path / ".gitignore").write_text("*.log\n")
+        (tmp_path / ".gitignore").write_text("*.log\n", encoding="utf-8")
         normal_file = tmp_path / "README.md"
-        normal_file.write_text("hello")
+        normal_file.write_text("hello", encoding="utf-8")
         gitignore = treex.GitIgnore(tmp_path)
         assert gitignore.ignored(normal_file) is False
 
@@ -214,9 +213,9 @@ class TestGitIgnore:
             stderr=subprocess.DEVNULL,
             check=True,
         )
-        (tmp_path / ".gitignore").write_text("*.log\n")
+        (tmp_path / ".gitignore").write_text("*.log\n", encoding="utf-8")
         ignored_file = tmp_path / "debug.log"
-        ignored_file.write_text("debug output")
+        ignored_file.write_text("debug output", encoding="utf-8")
         gitignore = treex.GitIgnore(tmp_path)
         assert gitignore.ignored(ignored_file) is True
 
@@ -228,7 +227,7 @@ class TestGitIgnore:
             stderr=subprocess.DEVNULL,
             check=True,
         )
-        (tmp_path / ".gitignore").write_text("build/\n")
+        (tmp_path / ".gitignore").write_text("build/\n", encoding="utf-8")
         build_dir = tmp_path / "build"
         build_dir.mkdir()
         gitignore = treex.GitIgnore(tmp_path)
@@ -245,7 +244,7 @@ class TestGitIgnore:
 class TestPrintTree:
     def test_prints_files_and_directories(self, tmp_path, capsys):
         (tmp_path / "dir").mkdir()
-        (tmp_path / "file.txt").write_text("hello")
+        (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
         stats = treex.print_tree(tmp_path)
         output = capsys.readouterr().out
         assert "dir" in output
@@ -255,7 +254,7 @@ class TestPrintTree:
         assert stats["total_size"] == 5
 
     def test_summary_only_suppresses_tree(self, tmp_path, capsys):
-        (tmp_path / "file.txt").write_text("hello")
+        (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
         stats = treex.print_tree(tmp_path, show_tree=False)
         output = capsys.readouterr().out
         assert output == ""
@@ -265,7 +264,7 @@ class TestPrintTree:
     def test_nested_directories(self, tmp_path, capsys):
         nested = tmp_path / "one" / "two"
         nested.mkdir(parents=True)
-        (nested / "file.txt").write_text("hello")
+        (nested / "file.txt").write_text("hello", encoding="utf-8")
         stats = treex.print_tree(tmp_path)
         output = capsys.readouterr().out
         assert "one" in output
@@ -309,8 +308,8 @@ class TestPrintTree:
 
     def test_collect_tree(self, tmp_path):
         (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "main.py").write_text("print('hello')\n")
-        (tmp_path / "README.md").write_text("# README\n")
+        (tmp_path / "src" / "main.py").write_text("print('hello')\n", encoding="utf-8")
+        (tmp_path / "README.md").write_text("# README\n", encoding="utf-8")
         stats = {"directories": 0, "files": 0, "total_size": 0}
         rows = []
         treex._collect_tree(tmp_path, "", stats, None, rows, False)
@@ -335,8 +334,8 @@ class TestPrintTree:
         assert stats["total_size"] == 0
 
     def test_tree_name_width_aligns_file_metadata(self, tmp_path, capsys):
-        (tmp_path / "a.txt").write_text("hello")
-        (tmp_path / "long_filename.txt").write_text("hello")
+        (tmp_path / "a.txt").write_text("hello", encoding="utf-8")
+        (tmp_path / "long_filename.txt").write_text("hello", encoding="utf-8")
         treex.print_tree(tmp_path)
         lines = capsys.readouterr().out.splitlines()
         size_positions = [line.index("5 B") for line in lines if ".txt" in line]
