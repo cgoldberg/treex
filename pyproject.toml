@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "treex-cli"
-version = "0.1.5.dev0"
+version = "0.1.5"
 description="List directory contents as a tree with file metadata"
 license = "MIT"
 license-files = ["LICENSE"]
