@@ -312,8 +312,8 @@ class TestPrintTree:
 
     def test_collect_tree(self, tmp_path):
         (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "main.py").write_text("print('hello')\n", encoding="utf-8")
-        (tmp_path / "README.md").write_text("# README\n", encoding="utf-8")
+        (tmp_path / "src" / "main.py").write_bytes(b"print('hello')\n")
+        (tmp_path / "README.md").write_bytes(b"# README\n")
         stats = {"directories": 0, "files": 0, "total_size": 0}
         rows = []
         treex._collect_tree(tmp_path, "", stats, None, rows, False)
