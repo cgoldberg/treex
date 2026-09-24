@@ -472,6 +472,16 @@ class TestPrintSummary:
         output = capsys.readouterr().out
         assert output == "2 directories • 15 files • 500 B\n"
 
+    def test_print_summary_singular(self, capsys):
+        stats = {
+            "directories": 1,
+            "files": 1,
+            "total_size": 5,
+        }
+        treex.print_summary(stats)
+        output = capsys.readouterr().out
+        assert output == "1 directory • 1 file • 5 B\n"
+
     def test_print_summary_with_metadata_suppressed(self, capsys):
         stats = {
             "directories": 1234,
@@ -534,3 +544,30 @@ class TestArgumentParsing:
         assert args.modified is True
         assert args.quiet is True
         assert args.summary is True
+
+
+class TestMain:
+    def test_success(self, tmp_path, capsys):
+        (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
+        with patch.object(sys, "argv", ["treex", str(tmp_path)]):
+            assert treex.main() == 0
+        output = capsys.readouterr().out
+        assert str(tmp_path) in output
+        assert "file.txt" in output
+        assert "5 B" in output
+        assert "1 file" in output
+
+    def test_not_a_directory(self, tmp_path, capsys):
+        path = tmp_path / "file.txt"
+        path.write_text("hello", encoding="utf-8")
+        with patch.object(sys, "argv", ["treex", str(path)]):
+            assert treex.main() == 1
+        assert f"Not a directory: {path}" in capsys.readouterr().err
+
+    def test_keyboard_interrupt(self, tmp_path, capsys):
+        with (
+            patch.object(sys, "argv", ["treex", str(tmp_path)]),
+            patch.object(treex, "print_tree", side_effect=KeyboardInterrupt),
+        ):
+            assert treex.main() == 130
+        assert "Interrupted" in capsys.readouterr().err

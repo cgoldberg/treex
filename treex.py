@@ -200,8 +200,10 @@ def print_summary(stats):
     directories = stats["directories"]
     files = stats["files"]
     total_size = stats["total_size"]
-    summary = f"{directories:,} directories • {files:,} files"
-    if total_size:
+    directory_label = "directory" if directories == 1 else "directories"
+    file_label = "file" if files == 1 else "files"
+    summary = f"{directories:,} {directory_label} • {files:,} {file_label}"
+    if total_size is not None:
         summary += f" • {_format_size(total_size)}"
     print(summary)
 
