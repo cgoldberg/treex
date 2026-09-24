@@ -32,7 +32,7 @@ class TestFormatSize:
     def test_gigabytes(self):
         assert treex._format_size(1024**3) == "1.0 GB"
 
-    def test_large_values(self):
+    def test_terabytes(self):
         assert treex._format_size(1024**4) == "1.0 TB"
 
 
@@ -81,17 +81,17 @@ class TestCountLines:
 
     def test_single_line_with_newline(self, tmp_path):
         path = tmp_path / "file.txt"
-        path.write_text("hello\n", encoding="utf-8")
+        path.write_bytes(b"hello\n")
         assert treex._count_lines(path) == 1
 
     def test_multiple_lines(self, tmp_path):
         path = tmp_path / "file.txt"
-        path.write_text("one\ntwo\nthree\n", encoding="utf-8")
+        path.write_bytes(b"one\ntwo\nthree\n")
         assert treex._count_lines(path) == 3
 
     def test_last_line_without_newline(self, tmp_path):
         path = tmp_path / "file.txt"
-        path.write_text("one\ntwo\nthree", encoding="utf-8")
+        path.write_bytes(b"one\ntwo\nthree")
         assert treex._count_lines(path) == 3
 
     def test_missing_file(self, tmp_path):
@@ -111,8 +111,7 @@ class TestFileMetadata:
 
     def test_binary_file(self, tmp_path):
         path = tmp_path / "image.bin"
-        contents = b"\x00\x01\x02\x03"
-        path.write_bytes(contents)
+        path.write_bytes(b"\x00\x01\x02\x03")
         size, info, raw_size, modified = treex._file_metadata(path)
         assert size == "4 B"
         assert info == "[binary]"
@@ -247,7 +246,7 @@ class TestGitIgnore:
 class TestPrintTree:
     def test_prints_files_and_directories(self, tmp_path, capsys):
         (tmp_path / "dir").mkdir()
-        (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
+        (tmp_path / "file.txt").write_bytes(b"hello")
         stats = treex.print_tree(tmp_path)
         output = capsys.readouterr().out
         assert "dir" in output
@@ -257,7 +256,7 @@ class TestPrintTree:
         assert stats["total_size"] == 5
 
     def test_suppress_tree(self, tmp_path, capsys):
-        (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
+        (tmp_path / "file.txt").write_bytes(b"hello")
         stats = treex.print_tree(tmp_path, show_tree=False)
         output = capsys.readouterr().out
         assert output == ""
@@ -265,24 +264,61 @@ class TestPrintTree:
         assert stats["total_size"] == 5
 
     def test_suppress_metadata(self, tmp_path, capsys):
-        (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
+        (tmp_path / "file.txt").write_bytes(b"hello")
         stats = treex.print_tree(tmp_path, show_metadata=False)
         output = capsys.readouterr().out
         assert output.strip().endswith("file.txt")
+        assert "5 B" not in output
         assert stats["files"] == 1
         assert stats["total_size"] is None
 
     def test_nested_directories(self, tmp_path, capsys):
         nested = tmp_path / "one" / "two"
         nested.mkdir(parents=True)
-        (nested / "file.txt").write_text("hello", encoding="utf-8")
+        (nested / "file.txt").write_bytes(b"hello")
         stats = treex.print_tree(tmp_path)
         output = capsys.readouterr().out
         assert "one" in output
         assert "two" in output
         assert "file.txt" in output
+        assert "5 B" in output
         assert stats["directories"] == 2
         assert stats["files"] == 1
+
+    def test_directory_size_is_recursive(self, tmp_path, capsys):
+        directory = tmp_path / "dir"
+        nested = directory / "nested"
+        nested.mkdir(parents=True)
+        (directory / "one.txt").write_bytes(b"12345")
+        (nested / "two.txt").write_bytes(b"1234567890")
+        treex.print_tree(tmp_path)
+        output = capsys.readouterr().out
+        directory_line = next(line for line in output.splitlines() if "dir" in line)
+        nested_line = next(line for line in output.splitlines() if "nested" in line)
+        assert "15 B" in directory_line
+        assert "10 B" in nested_line
+
+    def test_empty_directory_has_zero_size(self, tmp_path, capsys):
+        (tmp_path / "empty").mkdir()
+        treex.print_tree(tmp_path)
+        output = capsys.readouterr().out
+        empty_line = next(line for line in output.splitlines() if "empty" in line)
+        assert "0 B" in empty_line
+
+    def test_directory_size_respects_gitignore(self, tmp_path, capsys):
+        TestGitIgnore.init_git_repo(tmp_path)
+        directory = tmp_path / "data"
+        directory.mkdir()
+        (directory / "included.txt").write_bytes(b"12345")
+        (directory / "ignored.txt").write_bytes(b"1234567890")
+        (tmp_path / ".gitignore").write_text("data/ignored.txt\n", encoding="utf-8")
+        gitignore = treex.GitIgnore(tmp_path)
+        treex.print_tree(tmp_path, gitignore=gitignore)
+        output = capsys.readouterr().out
+        data_line = next(line for line in output.splitlines() if "data" in line)
+        assert "5 B" in data_line
+        assert "15 B" not in data_line
+        assert "ignored.txt" not in output
 
     def test_permission_denied(self, tmp_path, capsys):
         directory = tmp_path / "restricted"
@@ -295,13 +331,26 @@ class TestPrintTree:
         assert stats["files"] == 0
 
     def test_tree_name_width_aligns_file_metadata(self, tmp_path, capsys):
-        (tmp_path / "a.txt").write_text("hello", encoding="utf-8")
-        (tmp_path / "long_filename.txt").write_text("hello", encoding="utf-8")
+        (tmp_path / "a.txt").write_bytes(b"hello")
+        (tmp_path / "long_filename.txt").write_bytes(b"hello")
         treex.print_tree(tmp_path)
         lines = capsys.readouterr().out.splitlines()
         size_positions = [line.index("5 B") for line in lines if ".txt" in line]
         assert len(size_positions) == 2
         assert size_positions[0] == size_positions[1]
+
+    def test_tree_name_width_aligns_directory_and_file_metadata(self, tmp_path, capsys):
+        directory = tmp_path / "dir"
+        directory.mkdir()
+        (directory / "file.txt").write_bytes(b"hello")
+        (tmp_path / "long_filename.txt").write_bytes(b"hello")
+        treex.print_tree(tmp_path)
+        lines = capsys.readouterr().out.splitlines()
+        size_positions = [
+            line.index("5 B") for line in lines if "dir" in line or ".txt" in line
+        ]
+        assert len(size_positions) == 3
+        assert len(set(size_positions)) == 1
 
 
 class TestTreeEntries:
@@ -343,6 +392,9 @@ class TestCollectTree:
             "│   └── main.py",
             "└── README.md",
         ]
+        assert rows[0][1] == ("15 B", None, None)
+        assert rows[1][1][0] == "15 B"
+        assert rows[2][1][0] == "9 B"
         assert stats["directories"] == 1
         assert stats["files"] == 2
         assert stats["total_size"] == (len("print('hello')\n") + len("# README\n"))
@@ -359,14 +411,38 @@ class TestCollectTree:
             "│   └── main.py",
             "└── README.md",
         ]
+        assert all(row[1] is None for row in rows)
         assert stats["directories"] == 1
         assert stats["files"] == 2
         assert stats["total_size"] is None
 
+    def test_collect_tree_directory_size_includes_nested_files(self, tmp_path):
+        src = tmp_path / "src"
+        nested = src / "nested"
+        nested.mkdir(parents=True)
+        (src / "main.py").write_bytes(b"12345")
+        (nested / "helper.py").write_bytes(b"1234567890")
+        stats = {"directories": 0, "files": 0, "total_size": 0}
+        rows = []
+        treex._collect_tree(tmp_path, "", stats, None, rows, True, False)
+        assert rows[0] == ("└── src", ("15 B", None, None))
+        assert rows[1] == ("    ├── nested", ("10 B", None, None))
+        assert rows[2][0] == "    │   └── helper.py"
+        assert rows[3][0] == "    └── main.py"
+
+    def test_collect_tree_empty_directory_size(self, tmp_path):
+        (tmp_path / "empty").mkdir()
+        stats = {"directories": 0, "files": 0, "total_size": 0}
+        rows = []
+        treex._collect_tree(tmp_path, "", stats, None, rows, True, False)
+        assert rows == [("└── empty", ("0 B", None, None))]
+        assert stats["directories"] == 1
+        assert stats["files"] == 0
+        assert stats["total_size"] == 0
+
     def test_collect_tree_permission_denied(self, tmp_path):
         rows = []
         stats = {"directories": 0, "files": 0, "total_size": 0}
-
         with patch.object(Path, "iterdir", side_effect=PermissionError):
             treex._collect_tree(tmp_path, "", stats, None, rows, True, False)
         assert rows == [("└── [permission denied]", None)]
