@@ -14,6 +14,7 @@ filesystem is scanned normally without Git filtering.
 
 import argparse
 import subprocess
+import sys
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
@@ -289,28 +290,33 @@ def parse_args(argv=None):
 
 
 def main():
-    args = parse_args()
-    path = args.directory
-    if not path.is_dir():
-        print(f"Not a directory: {path}")
-        return 1
-    # Only initialize Git support if it will be used
-    gitignore = None if args.all else GitIgnore(path)
-    show_tree = not args.summary
-    show_metadata = not args.quiet
-    if show_tree:
-        print(path)
-    stats = print_tree(
-        path,
-        gitignore=gitignore,
-        show_metadata=show_metadata,
-        show_modified=args.modified,
-        show_tree=show_tree,
-    )
-    if show_tree:
-        print()
-    print_summary(stats)
-    return 0
+    try:
+        args = parse_args()
+        path = args.directory
+        if not path.is_dir():
+            print(f"Not a directory: {path}", file=sys.stderr)
+            return 1
+        # Only initialize Git support if it will be used
+        gitignore = None if args.all else GitIgnore(path)
+        show_tree = not args.summary
+        show_metadata = not args.quiet
+        if show_tree:
+            print(path)
+        stats = print_tree(
+            path,
+            gitignore=gitignore,
+            show_metadata=show_metadata,
+            show_modified=args.modified,
+            show_tree=show_tree,
+        )
+        if show_tree:
+            print()
+        print_summary(stats)
+    except KeyboardInterrupt:
+        print("\nInterrupted", file=sys.stderr)
+        return 130
+    else:
+        return 0
 
 
 if __name__ == "__main__":
