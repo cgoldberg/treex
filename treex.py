@@ -60,15 +60,17 @@ class GitIgnore:
             return result.returncode == 0
 
 
-def _format_size(size):  # noqa: RET503
+def _format_size(size):
     """Format bytes as a human-readable size."""
     units = ["B", "KB", "MB", "GB", "TB"]
     for unit in units:
-        if size < 1024 or unit == units[-1]:
+        if size < 1024:
             if unit == "B":
                 return f"{size} B"
             return f"{size:.1f} {unit}"
         size /= 1024
+    # Anything above 1 TB is shown in TB
+    return f"{size:.1f} TB"
 
 
 def _format_modified(timestamp):
@@ -166,7 +168,7 @@ def _collect_tree(
             rows.append((tree_name, None))
             # Indent nested entries, preserving the tree's vertical branch
             extension = "    " if is_last else "│   "
-            directory_size = _collect_tree(
+            dir_size = _collect_tree(
                 entry,
                 prefix + extension,
                 stats,
@@ -175,12 +177,9 @@ def _collect_tree(
                 show_metadata,
                 show_modified,
             )
-            total_size += directory_size
+            total_size += dir_size
             if show_metadata:
-                rows[row_index] = (
-                    tree_name,
-                    (_format_size(directory_size), None, None),
-                )
+                rows[row_index] = (tree_name, (_format_size(dir_size), None, None))
         elif entry.is_file():
             if show_metadata:
                 size_text, info, size, modified = _file_metadata(entry)
