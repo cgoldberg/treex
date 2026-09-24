@@ -1,6 +1,6 @@
 # treex
 
-## List directory contents as a tree with file metadata
+## List directory contents as a tree with file and directory metadata
 
 - Copyright (c) 2026 [Corey Goldberg][github-profile]
 - Development: [GitHub][github-repo]
@@ -12,12 +12,13 @@
 ## About
 
 `treex` is a command-line utility that recursively scans a directory and
-displays its contents as a tree along with file metadata.
+lists its contents as a tree along with file and directory metadata.
 
-- Displays human-readable file sizes
+- Shows human-readable file sizes
+- Shows recursive directory sizes
 - Shows line counts for text files
 - Identifies binary and unreadable files by type
-- Optionally displays modification timestamps
+- Optionally shows modification timestamps
 - Respects `.gitignore` rules when Git is installed
 
 ----
@@ -76,7 +77,7 @@ Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
 $ treex --help
 usage: treex [-h] [-a] [-m] [-q] [-s] [directory]
 
-List directory contents as a tree with file metadata.
+List directory contents as a tree with file and directory metadata.
 
 positional arguments:
   directory       directory to scan (default: current directory)

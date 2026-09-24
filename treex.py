@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 
-"""List directory contents as a tree with file metadata.
+"""List directory contents as a tree with file and directory metadata.
 
 The directory tree is rendered using Unicode box-drawing characters.
 
@@ -154,17 +154,19 @@ def _collect_tree(
     entries = _get_tree_entries(path, gitignore)
     if entries is None:
         rows.append((prefix + "└── [permission denied]", None))
-        return
+        return 0
+    total_size = 0
     for index, entry in enumerate(entries):
         is_last = index == len(entries) - 1
         connector = "└── " if is_last else "├── "
         tree_name = prefix + connector + entry.name
         if entry.is_dir():
             stats["directories"] += 1
+            row_index = len(rows)
             rows.append((tree_name, None))
             # Indent nested entries, preserving the tree's vertical branch
             extension = "    " if is_last else "│   "
-            _collect_tree(
+            directory_size = _collect_tree(
                 entry,
                 prefix + extension,
                 stats,
@@ -173,16 +175,25 @@ def _collect_tree(
                 show_metadata,
                 show_modified,
             )
+            total_size += directory_size
+            if show_metadata:
+                rows[row_index] = (
+                    tree_name,
+                    (_format_size(directory_size), None, None),
+                )
         elif entry.is_file():
-            stats["files"] += 1
             if show_metadata:
                 size_text, info, size, modified = _file_metadata(entry)
+                stats["files"] += 1
                 stats["total_size"] += size
+                total_size += size
                 timestamp = modified if show_modified else None
                 rows.append((tree_name, (size_text, info, timestamp)))
             else:
+                stats["files"] += 1
                 stats["total_size"] = None
                 rows.append((tree_name, None))
+    return total_size
 
 
 def print_summary(stats):
@@ -229,7 +240,9 @@ def print_tree(
                 print(tree_name)
                 continue
             size_text, info, modified = file_info_data
-            output = f"{tree_name:<{max_tree_name_width}}{size_text:>10}    {info:<10}"
+            output = f"{tree_name:<{max_tree_name_width}}{size_text:>10}"
+            if info is not None:
+                output += f"    {info:<10}"
             if modified is not None:
                 output += f"    {modified}"
             print(output)
@@ -239,7 +252,8 @@ def print_tree(
 def parse_args(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="List directory contents as a tree with file metadata.",
+        description="List directory contents as a tree with "
+        "file and directory metadata.",
     )
     parser.add_argument(
         "directory",
