@@ -53,6 +53,7 @@ py-modules = ["treex"]
 [tool.pytest]
 addopts = ["-v"]
 filterwarnings = ["default"]
+tmp_path_retention_policy = "none"
 
 [tool.ruff]
 line-length = 88
@@ -62,7 +63,7 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "ANN", "COM812", "D", "DTZ001", "DTZ006",
+    "ANN", "C901", "COM812", "D", "DTZ001", "DTZ006",
     "FBT", "PLR", "S603", "S607", "T201"
 ]
 fixable = ["ALL"]

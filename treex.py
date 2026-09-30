@@ -152,6 +152,7 @@ def _collect_tree(
     rows,
     show_metadata,
     show_modified,
+    show_files,
 ):
     """Walk the tree once and collect the output rows."""
     entries = _get_tree_entries(path, gitignore)
@@ -159,15 +160,26 @@ def _collect_tree(
         rows.append((prefix + "└── [permission denied]", None))
         return 0
     total_size = 0
-    for index, entry in enumerate(entries):
-        is_last = index == len(entries) - 1
-        connector = "└── " if is_last else "├── "
-        tree_name = prefix + connector + entry.name
+    # When files are hidden, only directories determine which visible
+    # entry is last. Files are still processed for stats and sizes.
+    visible_entries = entries
+    if not show_files:
+        visible_entries = [entry for entry in entries if entry.is_dir()]
+    visible_index = 0
+    for entry in entries:
+        is_visible = show_files or entry.is_dir()
+        if is_visible:
+            is_last = visible_index == len(visible_entries) - 1
+            visible_index += 1
+            connector = "└── " if is_last else "├── "
+            tree_name = prefix + connector + entry.name
+        else:
+            tree_name = None
         if entry.is_dir():
             stats["directories"] += 1
             row_index = len(rows)
             rows.append((tree_name, None))
-            # Indent nested entries, preserving the tree's vertical branch
+            # Indent nested entries, preserving the tree's vertical branch.
             extension = "    " if is_last else "│   "
             dir_size = _collect_tree(
                 entry,
@@ -177,6 +189,7 @@ def _collect_tree(
                 rows,
                 show_metadata,
                 show_modified,
+                show_files,
             )
             total_size += dir_size
             if show_metadata:
@@ -187,25 +200,15 @@ def _collect_tree(
                 stats["files"] += 1
                 stats["total_size"] += size
                 total_size += size
-                timestamp = modified if show_modified else None
-                rows.append((tree_name, (size_text, info, timestamp)))
+                if show_files:
+                    timestamp = modified if show_modified else None
+                    rows.append((tree_name, (size_text, info, timestamp)))
             else:
                 stats["files"] += 1
                 stats["total_size"] = None
-                rows.append((tree_name, None))
+                if show_files:
+                    rows.append((tree_name, None))
     return total_size
-
-
-def print_summary(stats):
-    directories = stats["directories"]
-    files = stats["files"]
-    total_size = stats["total_size"]
-    directory_label = "directory" if directories == 1 else "directories"
-    file_label = "file" if files == 1 else "files"
-    summary = f"{directories:,} {directory_label} • {files:,} {file_label}"
-    if total_size is not None:
-        summary += f" • {_format_size(total_size)}"
-    print(summary)
 
 
 def print_tree(
@@ -216,8 +219,9 @@ def print_tree(
     show_metadata=True,
     show_modified=False,
     show_tree=True,
+    show_files=True,
 ):
-    """Print the directory tree with aligned file metadata."""
+    """Print the directory tree with aligned metadata."""
     if stats is None:
         stats = {"directories": 0, "files": 0, "total_size": 0}
     rows = []
@@ -230,18 +234,16 @@ def print_tree(
         rows,
         show_metadata,
         show_modified,
+        show_files,
     )
     if show_tree:
-        # Align file metadata with the longest tree/name
-        max_tree_name_width = max(
-            (len(tree_name) for tree_name, _ in rows),
-            default=0,
-        )
-        for tree_name, file_info_data in rows:
-            if file_info_data is None:
+        # Align metadata with the longest tree/name
+        max_tree_name_width = max((len(tree_name) for tree_name, _ in rows), default=0)
+        for tree_name, metadata in rows:
+            if metadata is None:
                 print(tree_name)
                 continue
-            size_text, info, modified = file_info_data
+            size_text, info, modified = metadata
             output = f"{tree_name:<{max_tree_name_width}}{size_text:>10}"
             if info is not None:
                 output += f"    {info:<10}"
@@ -251,11 +253,24 @@ def print_tree(
     return stats
 
 
+def print_summary(stats):
+    """Print a summary of directory/file counts and total size."""
+    directories = stats["directories"]
+    files = stats["files"]
+    total_size = stats["total_size"]
+    directory_label = "directory" if directories == 1 else "directories"
+    file_label = "file" if files == 1 else "files"
+    summary = f"{directories:,} {directory_label} • {files:,} {file_label}"
+    if total_size is not None:
+        summary += f" • {_format_size(total_size)}"
+    print(summary)
+
+
 def parse_args(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="List directory contents as a tree with "
-        "file and directory metadata.",
+        description="List directory contents as a tree "
+        "with file and directory metadata.",
     )
     parser.add_argument(
         "directory",
@@ -268,7 +283,7 @@ def parse_args(argv=None):
         "-a",
         "--all",
         action="store_true",
-        help="show all files (including those ignored by Git)",
+        help="show all files, including those ignored by Git",
     )
     parser.add_argument(
         "-m",
@@ -281,6 +296,12 @@ def parse_args(argv=None):
         "--quiet",
         action="store_true",
         help="don't show file metadata",
+    )
+    parser.add_argument(
+        "-d",
+        "--dirs",
+        action="store_true",
+        help="show directories only",
     )
     parser.add_argument(
         "-s",
@@ -302,6 +323,7 @@ def main():
         gitignore = None if args.all else GitIgnore(path)
         show_tree = not args.summary
         show_metadata = not args.quiet
+        show_files = not args.dirs
         if show_tree:
             print(path)
         stats = print_tree(
@@ -310,6 +332,7 @@ def main():
             show_metadata=show_metadata,
             show_modified=args.modified,
             show_tree=show_tree,
+            show_files=show_files,
         )
         if show_tree:
             print()
