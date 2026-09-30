@@ -77,7 +77,7 @@ Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
 $ treex --help
 usage: treex [-h] [-a] [-m] [-q] [-d] [-s] [directory]
 
-List directory contents as a treewith file and directory metadata.
+List directory contents as a tree with file and directory metadata.
 
 positional arguments:
   directory       directory to scan (default: current directory)

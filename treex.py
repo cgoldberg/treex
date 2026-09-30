@@ -269,7 +269,7 @@ def print_summary(stats):
 def parse_args(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="List directory contents as a tree"
+        description="List directory contents as a tree "
         "with file and directory metadata.",
     )
     parser.add_argument(
