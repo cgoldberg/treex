@@ -246,7 +246,7 @@ def print_tree(
             size_text, info, modified = metadata
             output = f"{tree_name:<{max_tree_name_width}}{size_text:>10}"
             if info is not None:
-                output += f"    {info:<10}"
+                output += f"    {info:<12}"
             if modified is not None:
                 output += f"    {modified}"
             print(output)
