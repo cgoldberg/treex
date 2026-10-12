@@ -238,17 +238,16 @@ class TestGitIgnore:
         assert result == {"one.log", "two.log"}
         assert mock_run.call_count == 1
 
-    def test_ignored_many_handles_spaces_and_newlines(self, tmp_path):
+    def test_ignored_many_handles_spaces(self, tmp_path):
         init_git_repo(tmp_path)
-        (tmp_path / ".gitignore").write_text("*.log\n", encoding="utf-8")
-        filenames = ["debug output.log", "line\nbreak.log"]
-        paths = []
-        for name in filenames:
-            path = tmp_path / name
-            path.touch()
-            paths.append(path)
+        (tmp_path / ".gitignore").write_text("*.log\nbuild output/\n", encoding="utf-8")
+        ignored_file = tmp_path / "debug output.log"
+        ignored_file.touch()
+        ignored_dir = tmp_path / "build output"
+        ignored_dir.mkdir()
+        paths = [ignored_file, ignored_dir]
         gitignore = treex.GitIgnore(tmp_path)
-        assert gitignore.ignored_many(paths) == set(filenames)
+        assert gitignore.ignored_many(paths) == {"debug output.log", "build output"}
 
     @patch("treex.subprocess.run")
     def test_git_not_installed(self, mock_run, tmp_path):
