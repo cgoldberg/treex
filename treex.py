@@ -43,22 +43,40 @@ class GitIgnore:
                 self.enabled = True
 
     def ignored(self, path):
-        """Check if Git considers the path ignored."""
-        if not self.enabled:
-            return False
+        """Check if Git considers a path ignored."""
+        return bool(self.ignored_many([path]))
+
+    def ignored_many(self, paths):
+        """Check which paths Git considers ignored."""
+        if not self.enabled or self.repo_root is None:
+            return set()
+        relative_paths = []
+        for path in paths:
+            try:
+                relative = path.resolve().relative_to(self.repo_root)
+            except (ValueError, OSError):
+                continue
+            relative_paths.append(relative.as_posix())
+        if not relative_paths:
+            return set()
         try:
-            relative_path = path.resolve().relative_to(self.repo_root)
+            # Check all paths in one Git call.
+            # -z uses NUL delimiters to safely handle filenames
+            # containing special characters.
             result = subprocess.run(
-                ["git", "check-ignore", "--quiet", "--", str(relative_path)],
+                ["git", "check-ignore", "--stdin", "-z"],
                 cwd=self.repo_root,
-                stdout=subprocess.DEVNULL,
+                input="\0".join(relative_paths) + "\0",
+                stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
+                text=True,
                 check=False,
             )
-        except (ValueError, OSError):
-            return False
-        else:
-            return result.returncode == 0
+        except OSError:
+            return set()
+        if result.returncode not in (0, 1):
+            return set()
+        return set(result.stdout.split("\0")) - {""}
 
 
 def _format_size(size):
@@ -132,14 +150,21 @@ def _get_tree_entries(path, gitignore):
         entries = list(path.iterdir())
     except PermissionError:
         return None
-    # Filter ignored entries and Git's internal directory
-    entries = [
-        entry
-        for entry in entries
-        if not entry.is_symlink()
-        and (not gitignore or (entry.name != ".git" and not gitignore.ignored(entry)))
-    ]
-    # Group directories first and sort names case-insensitive
+    entries = [entry for entry in entries if not entry.is_symlink()]
+    if gitignore is not None:
+        entries = [entry for entry in entries if entry.name != ".git"]
+        if gitignore.enabled and gitignore.repo_root is not None:
+            ignored = gitignore.ignored_many(entries)
+            filtered_entries = []
+            for entry in entries:
+                try:
+                    relative = entry.resolve().relative_to(gitignore.repo_root)
+                except (ValueError, OSError):
+                    filtered_entries.append(entry)
+                    continue
+                if relative.as_posix() not in ignored:
+                    filtered_entries.append(entry)
+            entries = filtered_entries
     entries.sort(key=lambda p: (p.is_file(), p.name.casefold()))
     return entries
 
