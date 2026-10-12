@@ -211,6 +211,57 @@ class TestGitIgnore:
         gitignore = treex.GitIgnore(tmp_path)
         assert gitignore.ignored(build_dir) is True
 
+    def test_ignored_many_returns_ignored_paths(self, tmp_path):
+        init_git_repo(tmp_path)
+        (tmp_path / ".gitignore").write_text("*.log\nbuild/\n", encoding="utf-8")
+
+        ignored_file = tmp_path / "debug.log"
+        ignored_file.touch()
+        normal_file = tmp_path / "README.md"
+        normal_file.touch()
+        ignored_dir = tmp_path / "build"
+        ignored_dir.mkdir()
+
+        gitignore = treex.GitIgnore(tmp_path)
+
+        assert gitignore.ignored_many([ignored_file, normal_file, ignored_dir]) == {
+            "debug.log",
+            "build",
+        }
+
+    def test_ignored_many_uses_single_subprocess(self, tmp_path):
+        init_git_repo(tmp_path)
+        (tmp_path / ".gitignore").write_text("*.log\n", encoding="utf-8")
+
+        paths = []
+        for name in ("one.log", "two.log", "README.md"):
+            path = tmp_path / name
+            path.touch()
+            paths.append(path)
+
+        gitignore = treex.GitIgnore(tmp_path)
+
+        with patch("treex.subprocess.run", wraps=subprocess.run) as mock_run:
+            result = gitignore.ignored_many(paths)
+
+        assert result == {"one.log", "two.log"}
+        assert mock_run.call_count == 1
+
+    def test_ignored_many_handles_spaces_and_newlines(self, tmp_path):
+        init_git_repo(tmp_path)
+        (tmp_path / ".gitignore").write_text("*.log\n", encoding="utf-8")
+
+        filenames = ["debug output.log", "line\nbreak.log"]
+        paths = []
+        for name in filenames:
+            path = tmp_path / name
+            path.touch()
+            paths.append(path)
+
+        gitignore = treex.GitIgnore(tmp_path)
+
+        assert gitignore.ignored_many(paths) == set(filenames)
+
     @patch("treex.subprocess.run")
     def test_git_not_installed(self, mock_run, tmp_path):
         mock_run.side_effect = FileNotFoundError
