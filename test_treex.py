@@ -286,6 +286,116 @@ class TestTreeEntries:
         assert [entry.name for entry in entries] == ["target.txt"]
 
 
+class TestFilenamePatterns:
+    def test_include_matches_files_recursively(self, tmp_path, capsys):
+        (tmp_path / "main.py").touch()
+        (tmp_path / "README.md").touch()
+        nested = tmp_path / "src"
+        nested.mkdir()
+        (nested / "helper.py").touch()
+        (nested / "config.json").touch()
+        stats = treex.print_tree(tmp_path, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "main.py" in output
+        assert "helper.py" in output
+        assert "README.md" not in output
+        assert "config.json" not in output
+        assert "src" in output
+        assert stats["files"] == 2
+        assert stats["directories"] == 1
+
+    def test_include_is_case_sensitive(self, tmp_path, capsys):
+        (tmp_path / "lower.py").touch()
+        (tmp_path / "upper.PY").touch()
+        stats = treex.print_tree(tmp_path, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "lower.py" in output
+        assert "upper.PY" not in output
+        assert stats["files"] == 1
+
+    def test_include_matches_filename_not_path(self, tmp_path, capsys):
+        directory = tmp_path / "special.py"
+        directory.mkdir()
+        (directory / "helper.txt").touch()
+        (tmp_path / "helper.py").touch()
+        stats = treex.print_tree(tmp_path, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "helper.py" in output
+        assert "special.py" not in output
+        assert "helper.txt" not in output
+        assert stats["files"] == 1
+
+    def test_exclude_matches_filenames_recursively(self, tmp_path, capsys):
+        (tmp_path / "main.pyc").touch()
+        (tmp_path / "main.py").touch()
+        nested = tmp_path / "src"
+        nested.mkdir()
+        (nested / "helper.pyc").touch()
+        (nested / "helper.py").touch()
+        stats = treex.print_tree(tmp_path, exclude_pattern="*.pyc")
+        output = capsys.readouterr().out
+        assert "main.py" in output
+        assert "helper.py" in output
+        assert "main.pyc" not in output
+        assert "helper.pyc" not in output
+        assert stats["files"] == 2
+
+    def test_exclude_takes_precedence_over_include(self, tmp_path, capsys):
+        (tmp_path / "main.py").touch()
+        (tmp_path / "test_main.py").touch()
+        (tmp_path / "README.md").touch()
+        stats = treex.print_tree(
+            tmp_path,
+            include_pattern="*.py",
+            exclude_pattern="test_*.py",
+        )
+        output = capsys.readouterr().out
+        assert "main.py" in output
+        assert "test_main.py" not in output
+        assert "README.md" not in output
+        assert stats["files"] == 1
+
+    def test_include_hides_directories_without_matching_files(self, tmp_path, capsys):
+        matching = tmp_path / "matching"
+        matching.mkdir()
+        (matching / "main.py").touch()
+        nonmatching = tmp_path / "nonmatching"
+        nonmatching.mkdir()
+        (nonmatching / "notes.txt").touch()
+        stats = treex.print_tree(tmp_path, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "matching" in output
+        assert "main.py" in output
+        assert "nonmatching" not in output
+        assert "notes.txt" not in output
+        assert stats["directories"] == 1
+        assert stats["files"] == 1
+
+    def test_include_and_exclude_can_be_combined_with_depth(self, tmp_path, capsys):
+        (tmp_path / "main.py").write_bytes(b"123")
+        (tmp_path / "test_main.py").write_bytes(b"12345")
+        nested = tmp_path / "src"
+        nested.mkdir()
+        (nested / "helper.py").write_bytes(b"1234567")
+        deeper = nested / "deeper"
+        deeper.mkdir()
+        (deeper / "deep.py").write_bytes(b"123456789")
+        stats = treex.print_tree(
+            tmp_path,
+            include_pattern="*.py",
+            exclude_pattern="test_*.py",
+            max_depth=2,
+        )
+        output = capsys.readouterr().out
+        assert "main.py" in output
+        assert "helper.py" in output
+        assert "test_main.py" not in output
+        assert "deeper" not in output
+        assert "deep.py" not in output
+        assert stats["files"] == 2
+        assert stats["total_size"] == 10
+
+
 class TestCollectTree:
     def test_collect_tree(self, tmp_path):
         (tmp_path / "src").mkdir()
@@ -560,6 +670,62 @@ class TestPrintTree:
         assert len(set(size_positions)) == 1
 
 
+class TestFilteredTreeStatistics:
+    def test_summary_counts_only_included_files(self, tmp_path):
+        (tmp_path / "one.py").write_bytes(b"123")
+        (tmp_path / "two.py").write_bytes(b"12345")
+        (tmp_path / "notes.txt").write_bytes(b"1234567")
+        stats = treex.print_tree(tmp_path, show_tree=False, include_pattern="*.py")
+        assert stats["files"] == 2
+        assert stats["total_size"] == 8
+
+    def test_directory_size_reflects_filtered_files(self, tmp_path, capsys):
+        directory = tmp_path / "src"
+        directory.mkdir()
+        (directory / "main.py").write_bytes(b"12345")
+        (directory / "notes.txt").write_bytes(b"1234567890")
+        stats = treex.print_tree(tmp_path, include_pattern="*.py")
+        output = capsys.readouterr().out
+        src_line = next(line for line in output.splitlines() if "src" in line)
+        assert "5 B" in src_line
+        assert stats["files"] == 1
+        assert stats["total_size"] == 5
+
+    def test_directory_only_mode_preserves_filtered_statistics(self, tmp_path, capsys):
+        directory = tmp_path / "src"
+        directory.mkdir()
+        (directory / "main.py").write_bytes(b"12345")
+        (directory / "notes.txt").write_bytes(b"1234567890")
+        stats = treex.print_tree(tmp_path, show_files=False, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "src" in output
+        assert "main.py" not in output
+        assert "notes.txt" not in output
+        assert stats["directories"] == 1
+        assert stats["files"] == 1
+        assert stats["total_size"] == 5
+
+    def test_quiet_mode_with_filters(self, tmp_path, capsys):
+        (tmp_path / "main.py").write_bytes(b"12345")
+        (tmp_path / "notes.txt").write_bytes(b"1234567890")
+        stats = treex.print_tree(tmp_path, show_metadata=False, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "main.py" in output
+        assert "notes.txt" not in output
+        assert "5 B" not in output
+        assert stats["files"] == 1
+        assert stats["total_size"] is None
+
+    def test_summary_only_with_filters(self, tmp_path, capsys):
+        (tmp_path / "main.py").write_bytes(b"12345")
+        (tmp_path / "notes.txt").write_bytes(b"1234567890")
+        stats = treex.print_tree(tmp_path, show_tree=False, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert output == ""
+        assert stats["files"] == 1
+        assert stats["total_size"] == 5
+
+
 class TestPrintSummary:
     def test_print_summary(self, capsys):
         stats = {
@@ -602,6 +768,28 @@ class TestPrintSummary:
         assert output == "1,234 directories • 5,678 files\n"
 
 
+class TestPositiveInt:
+    @pytest.mark.parametrize(("value", "expected"), [("1", 1), ("3", 3), ("100", 100)])
+    def test_valid_positive_integer(self, value, expected):
+        assert treex._positive_int(value) == expected
+
+    @pytest.mark.parametrize("value", ["0", "-1", "-10"])
+    def test_rejects_zero_and_negative_integers(self, value):
+        with pytest.raises(
+            treex.argparse.ArgumentTypeError,
+            match="must be at least 1",
+        ):
+            treex._positive_int(value)
+
+    @pytest.mark.parametrize("value", ["abc", "1.5", ""])
+    def test_rejects_non_integer_input(self, value):
+        with pytest.raises(
+            treex.argparse.ArgumentTypeError,
+            match="must be a positive integer",
+        ):
+            treex._positive_int(value)
+
+
 class TestArgumentParsing:
     def test_defaults(self):
         args = treex.parse_args([])
@@ -611,6 +799,9 @@ class TestArgumentParsing:
         assert args.quiet is False
         assert args.dirs is False
         assert args.summary is False
+        assert args.include is None
+        assert args.exclude is None
+        assert args.depth is None
 
     def test_directory(self):
         args = treex.parse_args(["/tmp/project"])
@@ -636,7 +827,32 @@ class TestArgumentParsing:
         args = treex.parse_args(["--summary"])
         assert args.summary is True
 
-    def test_all_options(self):
+    def test_include(self):
+        args = treex.parse_args(["--include", "*.py"])
+        assert args.include == "*.py"
+
+    def test_exclude(self):
+        args = treex.parse_args(["--exclude", "*.pyc"])
+        assert args.exclude == "*.pyc"
+
+    def test_depth(self):
+        args = treex.parse_args(["--depth", "3"])
+        assert args.depth == 3
+
+    @pytest.mark.parametrize("depth", ["0", "-1"])
+    def test_depth_must_be_positive(self, depth, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            treex.parse_args(["--depth", depth])
+        assert exc_info.value.code == 2
+        assert "must be at least 1" in capsys.readouterr().err
+
+    def test_depth_must_be_integer(self, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            treex.parse_args(["--depth", "abc"])
+        assert exc_info.value.code == 2
+        assert "must be a positive integer" in capsys.readouterr().err
+
+    def test_all_options_combined(self):
         args = treex.parse_args(
             [
                 "--all",
@@ -644,6 +860,12 @@ class TestArgumentParsing:
                 "--quiet",
                 "--dirs",
                 "--summary",
+                "--include",
+                "*.py",
+                "--exclude",
+                "test_*.py",
+                "--depth",
+                "3",
                 "/tmp/project",
             ],
         )
@@ -653,13 +875,17 @@ class TestArgumentParsing:
         assert args.quiet is True
         assert args.dirs is True
         assert args.summary is True
+        assert args.include == "*.py"
+        assert args.exclude == "test_*.py"
+        assert args.depth == 3
 
     def test_short_options(self):
-        args = treex.parse_args(["-a", "-m", "-q", "-d", "-s"])
+        args = treex.parse_args(["-a", "-m", "-q", "-d", "-D", "3", "-s"])
         assert args.all is True
         assert args.modified is True
         assert args.quiet is True
         assert args.dirs is True
+        assert args.depth == 3
         assert args.summary is True
 
 
