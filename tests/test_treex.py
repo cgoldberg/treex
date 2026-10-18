@@ -225,20 +225,6 @@ class TestGitIgnore:
         gitignore = treex.GitIgnore(tmp_path)
         assert gitignore.ignored_many(paths) == {"debug.log", "build"}
 
-    def test_ignored_many_uses_single_subprocess(self, tmp_path):
-        init_git_repo(tmp_path)
-        (tmp_path / ".gitignore").write_text("*.log\n", encoding="utf-8")
-        paths = []
-        for name in ("one.log", "two.log", "README.md"):
-            path = tmp_path / name
-            path.touch()
-            paths.append(path)
-        gitignore = treex.GitIgnore(tmp_path)
-        with patch("treex.treex.subprocess.run", wraps=subprocess.run) as mock_run:
-            result = gitignore.ignored_many(paths)
-        assert result == {"one.log", "two.log"}
-        assert mock_run.call_count == 1
-
     def test_ignored_many_handles_spaces(self, tmp_path):
         init_git_repo(tmp_path)
         (tmp_path / ".gitignore").write_text("*.log\nbuild output/\n", encoding="utf-8")
@@ -250,12 +236,20 @@ class TestGitIgnore:
         gitignore = treex.GitIgnore(tmp_path)
         assert gitignore.ignored_many(paths) == {"debug output.log", "build output"}
 
-    @patch("treex.treex.subprocess.run")
-    def test_git_not_installed(self, mock_run, tmp_path):
-        mock_run.side_effect = FileNotFoundError
+    def test_missing_git_index(self, tmp_path):
+        init_git_repo(tmp_path)
+        # Remove the index to simulate a repository without one.
+        index = tmp_path / ".git" / "index"
+        index.unlink(missing_ok=True)
+        (tmp_path / ".gitignore").write_text("*.log\n", encoding="utf-8")
+        ignored_file = tmp_path / "debug.log"
+        ignored_file.touch()
+        normal_file = tmp_path / "README.md"
+        normal_file.touch()
         gitignore = treex.GitIgnore(tmp_path)
-        assert gitignore.enabled is False
-        assert gitignore.ignored(tmp_path / "file.txt") is False
+        assert gitignore.enabled is True
+        assert gitignore.ignored(ignored_file) is True
+        assert gitignore.ignored(normal_file) is False
 
 
 class TestTreeEntries:
@@ -1108,6 +1102,14 @@ class TestArgumentParsing:
     def test_directory(self):
         args = treex.parse_args(["/tmp/project"])
         assert args.directory == Path("/tmp/project")
+
+    @pytest.mark.parametrize("option", ["-V", "--version"])
+    def test_version(self, option, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            treex.parse_args([option])
+        assert exc_info.value.code == 0
+        output = capsys.readouterr().out
+        assert treex.__version__ in output
 
     def test_all(self):
         args = treex.parse_args(["--all"])

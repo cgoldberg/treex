@@ -16,7 +16,7 @@ its contents as a tree along with file and directory metadata.
 
 ### Features:
 
-- Respects `.gitignore` rules when Git is installed
+- Respects `.gitignore` rules inside Git repositories
 - Shows human-readable file sizes
 - Shows recursive directory sizes
 - Shows line counts for text files
@@ -62,8 +62,19 @@ its contents as a tree along with file and directory metadata.
 ## Requirements
 
 - Python 3.10+
-- Git 2.0+ (optional)
 - UTF-8-compatible terminal
+
+----
+
+### Git ignore support
+
+`treex` uses [Gitoxide (`gix`)][gitoxide-home], a native Rust implementation of
+Git functionality, to evaluate `.gitignore` rules without invoking the Git
+executable. Git does not need to be installed for ignore matching to work.
+
+When the specified directory is inside a Git working tree, `treex` respects
+applicable `.gitignore` rules by default. Outside a Git working tree, Git ignore
+filtering is disabled. Use `--all` to include files ignored by Git.
 
 ----
 
@@ -81,9 +92,8 @@ manager:
 ## Usage
 
 ```
-usage: treex [-h] [--all] [--modified] [--quiet] [--dirs] [--summary]
-             [--include PATTERN] [--exclude PATTERN] [--include-regex PATTERN]
-             [--exclude-regex PATTERN] [--depth DEPTH]
+usage: treex [-h] [-V] [-a] [-m] [-q] [-d] [-s] [-i PATTERN] [-e PATTERN]
+             [-I PATTERN] [-E PATTERN] [-D DEPTH]
              [directory]
 
 List directory contents as a tree with file and directory metadata.
@@ -93,16 +103,17 @@ positional arguments:
 
 options:
   -h, --help                   show this help message and exit
-  --all, -a                    show all files, including those ignored by Git
-  --modified, -m               show file modification times
-  --quiet, -q                  don't show file metadata
-  --dirs, -d                   show directories only
-  --summary, -s                show summary only
-  --include, -i PATTERN        include paths matching a glob pattern
-  --exclude, -e PATTERN        exclude paths matching a glob pattern
-  --include-regex, -I PATTERN  include paths matching a regular expression
-  --exclude-regex, -E PATTERN  exclude paths matching a regular expression
-  --depth, -D DEPTH            limit levels displayed below the starting directory
+  -V, --version                show version information and exit
+  -a, --all                    show all files, including those ignored by Git
+  -m, --modified               show file modification times
+  -q, --quiet                  don't show file metadata
+  -d, --dirs                   show directories only
+  -s, --summary                show summary only
+  -i, --include PATTERN        include paths matching a glob pattern
+  -e, --exclude PATTERN        exclude paths matching a glob pattern
+  -I, --include-regex PATTERN  include paths matching a regular expression
+  -E, --exclude-regex PATTERN  exclude paths matching a regular expression
+  -D, --depth DEPTH            limit levels displayed below starting directory
 ```
 
 ### Filtering paths
@@ -154,5 +165,6 @@ the include/exclude filters.
 
 [github-profile]: https://github.com/cgoldberg
 [github-repo]: https://github.com/cgoldberg/treex
+[gitoxide-home]: https://rustutils.com/tools/gitoxide
 [mit-license]: https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/LICENSE
 [pypi-home]: https://pypi.org/project/treex-cli
