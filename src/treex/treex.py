@@ -7,42 +7,41 @@
 The directory tree is rendered using Unicode box-drawing characters.
 
 When run inside a Git repository, files and directories ignored by Git
-are automatically excluded using Git's own ignore rules. If Git is not
-installed, or the directory is not part of a Git repository, the
-filesystem is scanned normally without Git filtering.
+are automatically excluded using applicable `.gitignore` rules. Ignore
+matching is handled natively by Gitoxide (`gix`) and does not require
+Git to be installed. If the directory is not part of a Git repository,
+the filesystem is scanned normally without Git filtering.
 """
 
 import argparse
 import fnmatch
 import re
-import subprocess
 import sys
-from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
+from ._native import IgnoreMatcher
+
 
 class GitIgnore:
-    """Use Git's ignore rules when available."""
+    """Apply Git ignore rules using Gitoxide when inside a repository."""
 
     def __init__(self, directory):
         self.directory = Path(directory).resolve()
         self.enabled = False
         self.repo_root = None
-        # Check Git availability and find the repository root
-        with suppress(OSError):
-            result = subprocess.run(
-                ["git", "rev-parse", "--show-toplevel"],
-                cwd=self.directory,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                check=False,
-            )
-            # Enable Git support if this is a repository
-            if result.returncode == 0:
-                self.repo_root = Path(result.stdout.strip()).resolve()
-                self.enabled = True
+        self.matcher = None
+        # Discover the repository and initialize ignore matching
+        try:
+            self.matcher = IgnoreMatcher(str(self.directory))
+        except RuntimeError:
+            return
+        if self.matcher.repo_root is None:
+            self.matcher = None
+            return
+        # Enable Git support if this is a repository
+        self.repo_root = Path(self.matcher.repo_root).resolve()
+        self.enabled = True
 
     def ignored(self, path):
         """Check if Git considers a path ignored."""
@@ -50,35 +49,25 @@ class GitIgnore:
 
     def ignored_many(self, paths):
         """Check which paths Git considers ignored."""
-        if not self.enabled or self.repo_root is None:
+        if not self.enabled or self.repo_root is None or self.matcher is None:
             return set()
         relative_paths = []
+        matcher_paths = []
         for path in paths:
             try:
                 relative = path.resolve().relative_to(self.repo_root)
             except (ValueError, OSError):
                 continue
             relative_paths.append(relative.as_posix())
-        if not relative_paths:
+            matcher_paths.append((relative.as_posix(), path.is_dir()))
+        if not matcher_paths:
             return set()
-        try:
-            # Check all paths in one Git call.
-            # -z uses NUL delimiters to safely handle filenames
-            # containing special characters.
-            result = subprocess.run(
-                ["git", "check-ignore", "--stdin", "-z"],
-                cwd=self.repo_root,
-                input="\0".join(relative_paths) + "\0",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                check=False,
-            )
-        except OSError:
-            return set()
-        if result.returncode not in (0, 1):
-            return set()
-        return set(result.stdout.split("\0")) - {""}
+        results = self.matcher.ignored_many(matcher_paths)
+        return {
+            relative
+            for relative, ignored in zip(relative_paths, results, strict=True)
+            if ignored
+        }
 
 
 def _format_size(size):

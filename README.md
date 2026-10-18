@@ -16,7 +16,7 @@ its contents as a tree along with file and directory metadata.
 
 ### Features:
 
-- Respects `.gitignore` rules when Git is installed
+- Respects `.gitignore` rules inside Git repositories
 - Shows human-readable file sizes
 - Shows recursive directory sizes
 - Shows line counts for text files
@@ -62,8 +62,19 @@ its contents as a tree along with file and directory metadata.
 ## Requirements
 
 - Python 3.10+
-- Git 2.0+ (optional)
 - UTF-8-compatible terminal
+
+----
+
+### Git ignore support
+
+`treex` uses [Gitoxide (`gix`)][gitoxide-home], a native Rust implementation of
+Git functionality, to evaluate `.gitignore` rules without invoking the Git
+executable. Git does not need to be installed for ignore matching to work.
+
+When the specified directory is inside a Git working tree, `treex` respects
+applicable `.gitignore` rules by default. Outside a Git working tree, Git ignore
+filtering is disabled. Use `--all` to include files ignored by Git.
 
 ----
 
@@ -154,5 +165,6 @@ the include/exclude filters.
 
 [github-profile]: https://github.com/cgoldberg
 [github-repo]: https://github.com/cgoldberg/treex
+[gitoxide-home]: https://rustutils.com/tools/gitoxide
 [mit-license]: https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/LICENSE
 [pypi-home]: https://pypi.org/project/treex-cli

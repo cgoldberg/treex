@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,19 +11,23 @@ license-files = ["LICENSE"]
 authors = [{name = "Corey Goldberg"}]
 maintainers = [{name = "Corey Goldberg"}]
 readme = "README.md"
-requires-python = ">= 3.10"
-keywords = ["tree", "directory", "files", "cli", "metadata"]
+requires-python = ">= 3.11"
+keywords = [
+    "tree", "cli", "directories", "files",
+    "git", "gitignore", "gitoxide", "metadata",
+    "python", "rust",
+]
 classifiers = [
         "Environment :: Console",
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3.14",
         "Programming Language :: Python :: 3.15",
+        "Programming Language :: Rust",
 ]
 
 [project.scripts]
@@ -50,25 +54,33 @@ validate = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[[tool.setuptools-rust.ext-modules]]
+target = "treex._native"
+path = "Cargo.toml"
+binding = "PyO3"
+
 [tool.pytest]
 addopts = ["-v"]
 filterwarnings = ["default"]
+testpaths = ["tests"]
 tmp_path_retention_policy = "none"
 
 [tool.ruff]
 line-length = 88
 respect-gitignore = true
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "ANN", "C901", "COM812", "D", "DTZ001", "DTZ006",
-    "FBT", "PLR", "S603", "S607", "T201",
+    "ANN", "C901", "COM812", "D", "DTZ001",
+    "DTZ006", "FBT", "PLR", "S603", "S607",
+    "T201",
 ]
 fixable = ["ALL"]
 
