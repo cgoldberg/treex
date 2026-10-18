@@ -111,7 +111,7 @@ Use `--include` and `--exclude` to filter paths by glob pattern:
 
 ```
 treex --include '*.py'
-treex --exclude '*.pyc'
+treex --exclude 'tests/*.py'
 treex --include '*.py' --exclude 'test_*.py'
 ```
 
