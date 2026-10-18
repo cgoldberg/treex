@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-import treex
+import treex.treex as treex
 
 
 def init_git_repo(path):
@@ -234,7 +234,7 @@ class TestGitIgnore:
             path.touch()
             paths.append(path)
         gitignore = treex.GitIgnore(tmp_path)
-        with patch("treex.subprocess.run", wraps=subprocess.run) as mock_run:
+        with patch("treex.treex.subprocess.run", wraps=subprocess.run) as mock_run:
             result = gitignore.ignored_many(paths)
         assert result == {"one.log", "two.log"}
         assert mock_run.call_count == 1
@@ -250,7 +250,7 @@ class TestGitIgnore:
         gitignore = treex.GitIgnore(tmp_path)
         assert gitignore.ignored_many(paths) == {"debug output.log", "build output"}
 
-    @patch("treex.subprocess.run")
+    @patch("treex.treex.subprocess.run")
     def test_git_not_installed(self, mock_run, tmp_path):
         mock_run.side_effect = FileNotFoundError
         gitignore = treex.GitIgnore(tmp_path)

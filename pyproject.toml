@@ -27,7 +27,7 @@ classifiers = [
 ]
 
 [project.scripts]
-treex = "treex:main"
+treex = "treex.treex:main"
 
 [project.urls]
 homepage = "https://github.com/cgoldberg/treex"
@@ -49,7 +49,10 @@ validate = [
 ]
 
 [tool.setuptools]
-py-modules = ["treex"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest]
 addopts = ["-v"]
@@ -70,7 +73,7 @@ ignore = [
 fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
-"**/test_*.py" = ["S101", "S108", "SLF001"]
+"**/test_*.py" = ["INP001", "S101", "S108", "SLF001"]
 
 [tool.ruff.format]
 docstring-code-format = true
