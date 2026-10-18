@@ -66,7 +66,7 @@ its contents as a tree along with file and directory metadata.
 
 ----
 
-### Git ignore support
+## Git ignore support
 
 `treex` uses [Gitoxide][gitoxide-home] (`gix`), a native Rust implementation of
 Git functionality, to evaluate `.gitignore` rules without invoking the Git
