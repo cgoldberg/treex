@@ -14,6 +14,7 @@ filesystem is scanned normally without Git filtering.
 
 import argparse
 import fnmatch
+import re
 import subprocess
 import sys
 from contextlib import suppress
@@ -182,6 +183,8 @@ def _scan_tree(
     show_modified,
     include_pattern=None,
     exclude_pattern=None,
+    include_regex=None,
+    exclude_regex=None,
     max_depth=None,
     depth=0,
     root=None,
@@ -190,12 +193,15 @@ def _scan_tree(
 
     The starting directory has depth 0. Its immediate entries have
     depth 1. Directories at the depth limit are shown without
-    descending into them. Include/exclude patterns match paths relative
-    to the starting directory. Directory sizes include only files within
-    the permitted depth that pass the include/exclude filters.
+    descending into them. Include/exclude patterns and regular
+    expressions match paths relative to the starting directory.
+    Directories are retained only when they contain matching files.
+    Directory sizes include only files within the permitted depth
+    that pass the include/exclude filters.
     """
+    path = path.resolve()
     if root is None:
-        root = path.resolve()
+        root = path
     if max_depth is not None and depth >= max_depth:
         return []
     entries = _get_tree_entries(path, gitignore)
@@ -212,9 +218,16 @@ def _scan_tree(
             }
         ]
     nodes = []
+    has_include = include_pattern is not None or include_regex is not None
     for entry in entries:
-        entry_depth = depth + 1
+        relative_path = entry.relative_to(root).as_posix()
+        # Exclusions take precedence over inclusions.
+        if _matches_pattern(relative_path, exclude_pattern):
+            continue
+        if exclude_regex is not None and exclude_regex.search(relative_path):
+            continue
         if entry.is_dir():
+            entry_depth = depth + 1
             if max_depth is not None and entry_depth >= max_depth:
                 children = []
             else:
@@ -225,12 +238,14 @@ def _scan_tree(
                     show_modified,
                     include_pattern,
                     exclude_pattern,
+                    include_regex,
+                    exclude_regex,
                     max_depth,
                     entry_depth,
                     root,
                 )
             contains_match = any(child["contains_match"] for child in children)
-            if include_pattern is not None and not contains_match:
+            if has_include and not contains_match:
                 continue
             size = (
                 sum(child["size"] or 0 for child in children) if show_metadata else None
@@ -249,13 +264,12 @@ def _scan_tree(
             continue
         if not entry.is_file():
             continue
-        relative_path = entry.relative_to(root).as_posix()
-        # Exclusions take precedence over inclusions
-        if _matches_pattern(relative_path, exclude_pattern):
-            continue
         if include_pattern is not None and not _matches_pattern(
-            relative_path, include_pattern
+            relative_path,
+            include_pattern,
         ):
+            continue
+        if include_regex is not None and not include_regex.search(relative_path):
             continue
         if show_metadata:
             size_text, info, size, modified = _file_metadata(entry)
@@ -333,6 +347,8 @@ def _collect_tree(
     show_files,
     include_pattern=None,
     exclude_pattern=None,
+    include_regex=None,
+    exclude_regex=None,
     max_depth=None,
 ):
     """Collect filtered tree rows and update summary statistics."""
@@ -345,6 +361,8 @@ def _collect_tree(
         show_modified,
         include_pattern,
         exclude_pattern,
+        include_regex,
+        exclude_regex,
         max_depth,
     )
     _collect_stats(nodes, stats)
@@ -363,6 +381,8 @@ def print_tree(
     show_files=True,
     include_pattern=None,
     exclude_pattern=None,
+    include_regex=None,
+    exclude_regex=None,
     max_depth=None,
 ):
     """Print the directory tree with aligned metadata."""
@@ -380,6 +400,8 @@ def print_tree(
         show_files,
         include_pattern,
         exclude_pattern,
+        include_regex,
+        exclude_regex,
         max_depth,
     )
     if show_tree:
@@ -396,7 +418,6 @@ def print_tree(
             if modified is not None:
                 output += f"    {modified}"
             print(output)
-
     return stats
 
 
@@ -432,8 +453,8 @@ def parse_args(argv=None):
     def formatter(prog):
         return argparse.HelpFormatter(
             prog,
-            width=80,
-            max_help_position=30,
+            width=88,
+            max_help_position=32,
         )
 
     parser = argparse.ArgumentParser(
@@ -491,6 +512,18 @@ def parse_args(argv=None):
         help="exclude paths matching a glob pattern",
     )
     parser.add_argument(
+        "--include-regex",
+        "-I",
+        metavar="PATTERN",
+        help="include paths matching a regular expression",
+    )
+    parser.add_argument(
+        "--exclude-regex",
+        "-E",
+        metavar="PATTERN",
+        help="exclude paths matching a regular expression",
+    )
+    parser.add_argument(
         "--depth",
         "-D",
         type=_positive_int,
@@ -507,6 +540,20 @@ def main():
         if not path.is_dir():
             print(f"Not a directory: {path}", file=sys.stderr)
             return 1
+        try:
+            include_regex = (
+                re.compile(args.include_regex)
+                if args.include_regex is not None
+                else None
+            )
+            exclude_regex = (
+                re.compile(args.exclude_regex)
+                if args.exclude_regex is not None
+                else None
+            )
+        except re.error as exc:
+            print(f"Invalid regular expression: {exc}", file=sys.stderr)
+            return 2
         # Only initialize Git support if it will be used
         gitignore = None if args.all else GitIgnore(path)
         show_tree = not args.summary
@@ -523,6 +570,8 @@ def main():
             show_files=show_files,
             include_pattern=args.include,
             exclude_pattern=args.exclude,
+            include_regex=include_regex,
+            exclude_regex=exclude_regex,
             max_depth=args.depth,
         )
         if show_tree:

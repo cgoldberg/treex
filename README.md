@@ -22,7 +22,8 @@ its contents as a tree along with file and directory metadata.
 - Shows line counts for text files
 - Identifies binary and unreadable files by type
 - Optionally shows modification timestamps
-- Optionally includes or excludes files using glob patterns
+- Optionally includes or excludes paths using glob patterns
+- Optionally includes or excludes paths using regular expressions
 - Optionally limits the depth of the displayed tree
 
 ----
@@ -81,56 +82,55 @@ manager:
 
 ```
 usage: treex [-h] [--all] [--modified] [--quiet] [--dirs] [--summary]
-             [--include PATTERN] [--exclude PATTERN] [--depth DEPTH]
+             [--include PATTERN] [--exclude PATTERN] [--include-regex PATTERN]
+             [--exclude-regex PATTERN] [--depth DEPTH]
              [directory]
 
 List directory contents as a tree with file and directory metadata.
 
 positional arguments:
-  directory              directory to scan (default: current directory)
+  directory                    directory to scan (default: current directory)
 
 options:
-  -h, --help             show this help message and exit
-  --all, -a              show all files, including those ignored by Git
-  --modified, -m         show file modification times
-  --quiet, -q            don't show file metadata
-  --dirs, -d             show directories only
-  --summary, -s          show summary only
-  --include, -i PATTERN  include paths matching a glob pattern
-  --exclude, -e PATTERN  exclude paths matching a glob pattern
-  --depth, -D DEPTH      limit levels displayed below the starting directory
+  -h, --help                   show this help message and exit
+  --all, -a                    show all files, including those ignored by Git
+  --modified, -m               show file modification times
+  --quiet, -q                  don't show file metadata
+  --dirs, -d                   show directories only
+  --summary, -s                show summary only
+  --include, -i PATTERN        include paths matching a glob pattern
+  --exclude, -e PATTERN        exclude paths matching a glob pattern
+  --include-regex, -I PATTERN  include paths matching a regular expression
+  --exclude-regex, -E PATTERN  exclude paths matching a regular expression
+  --depth, -D DEPTH            limit levels displayed below the starting directory
 ```
 
 ### Filtering paths
 
-Use `--include` to display only paths matching a glob pattern:
+Use `--include` and `--exclude` to filter paths by glob pattern:
 
 ```
 treex --include '*.py'
+treex --exclude 'tests/*.py'
+treex --include '*.py' --exclude 'test_*.py'
 ```
 
-Use `--exclude` to hide paths matching a glob pattern:
+Use `--include-regex` and `--exclude-regex` to filter paths by regular
+expression:
 
 ```
-treex --exclude '*.pyc'
+treex --include-regex '^src/'
+treex --exclude-regex '(^|/)tests/'
+treex --include-regex '\.py$' --exclude-regex '(^|/)test_[^/]*\.py$'
 ```
 
 Patterns match paths relative to the starting directory, using forward slashes
-as separators. Matching is case-sensitive, and `*` matches across directory
-separators. Exclusions take precedence over inclusions.
+as separators. Matching is case-sensitive. Glob patterns use `*` to match any
+characters, including directory separators. Regular expressions use Python's
+regex syntax. Exclusions take precedence over inclusions.
 
-For example:
-
-```
-treex --include '*.py'
-treex --exclude '*.pyc'
-treex --include '*.py' --exclude 'test_*.py'
-treex --include 'src/*.py'
-treex --exclude 'tests/*.py'
-```
-
-Note: quote glob patterns to prevent the shell from expanding them before
-`treex` receives them.
+Note: quote glob and regex patterns to prevent the shell from interpreting them
+before `treex` receives them.
 
 ### Limiting tree depth
 
@@ -151,7 +151,6 @@ the include/exclude filters.
 ## Screenshot
 
 ![Screenshot](https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/screenshot.png)
-
 
 [github-profile]: https://github.com/cgoldberg
 [github-repo]: https://github.com/cgoldberg/treex
