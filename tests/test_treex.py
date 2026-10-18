@@ -1103,6 +1103,14 @@ class TestArgumentParsing:
         args = treex.parse_args(["/tmp/project"])
         assert args.directory == Path("/tmp/project")
 
+    @pytest.mark.parametrize("option", ["-V", "--version"])
+    def test_version(self, option, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            treex.parse_args([option])
+        assert exc_info.value.code == 0
+        output = capsys.readouterr().out
+        assert treex.__version__ in output
+
     def test_all(self):
         args = treex.parse_args(["--all"])
         assert args.all is True

@@ -18,9 +18,15 @@ import fnmatch
 import re
 import sys
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from ._native import IgnoreMatcher
+
+try:
+    __version__ = version("treex-cli")
+except PackageNotFoundError:
+    __version__ = "unknown"
 
 
 class GitIgnore:
@@ -442,7 +448,7 @@ def parse_args(argv=None):
     def formatter(prog):
         return argparse.HelpFormatter(
             prog,
-            width=88,
+            width=80,
             max_help_position=32,
         )
 
@@ -459,65 +465,72 @@ def parse_args(argv=None):
         help="directory to scan (default: current directory)",
     )
     parser.add_argument(
-        "--all",
+        "-V",
+        "--version",
+        action="version",
+        version=(f"%(prog)s {__version__} "),
+        help="show version information and exit",
+    )
+    parser.add_argument(
         "-a",
+        "--all",
         action="store_true",
         help="show all files, including those ignored by Git",
     )
     parser.add_argument(
-        "--modified",
         "-m",
+        "--modified",
         action="store_true",
         help="show file modification times",
     )
     parser.add_argument(
-        "--quiet",
         "-q",
+        "--quiet",
         action="store_true",
         help="don't show file metadata",
     )
     parser.add_argument(
-        "--dirs",
         "-d",
+        "--dirs",
         action="store_true",
         help="show directories only",
     )
     parser.add_argument(
-        "--summary",
         "-s",
+        "--summary",
         action="store_true",
         help="show summary only",
     )
     parser.add_argument(
-        "--include",
         "-i",
+        "--include",
         metavar="PATTERN",
         help="include paths matching a glob pattern",
     )
     parser.add_argument(
-        "--exclude",
         "-e",
+        "--exclude",
         metavar="PATTERN",
         help="exclude paths matching a glob pattern",
     )
     parser.add_argument(
-        "--include-regex",
         "-I",
+        "--include-regex",
         metavar="PATTERN",
         help="include paths matching a regular expression",
     )
     parser.add_argument(
-        "--exclude-regex",
         "-E",
+        "--exclude-regex",
         metavar="PATTERN",
         help="exclude paths matching a regular expression",
     )
     parser.add_argument(
-        "--depth",
         "-D",
+        "--depth",
         type=_positive_int,
         metavar="DEPTH",
-        help="limit levels displayed below the starting directory",
+        help="limit levels displayed below starting directory",
     )
     return parser.parse_args(argv)
 
