@@ -68,10 +68,11 @@ its contents as a tree along with file and directory metadata.
 
 ## Installation
 
-Install `treex` from [PyPI][pypi-home] using either `pip` or `pipx`:
+Install `treex` from [PyPI][pypi-home] using your preferred Python package manager:
 
-- `pip install treex-cli`
-- `pipx install treex-cli`
+- **pip:** `pip install treex-cli`
+- **pipx:** `pipx install treex-cli`
+- **uv:** `uv tool install treex-cli`
 
 ----
 
