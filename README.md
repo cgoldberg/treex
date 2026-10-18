@@ -96,7 +96,7 @@ options:
   --summary, -s          show summary only
   --include, -i PATTERN  include files matching a glob pattern
   --exclude, -e PATTERN  exclude files matching a glob pattern
-  --depth, -D DEPTH      limit depth below the starting directory
+  --depth, -D DEPTH      limit levels displayed below the starting directory
 ```
 
 ### Filtering files

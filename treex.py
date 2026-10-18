@@ -490,7 +490,7 @@ def parse_args(argv=None):
         "-D",
         type=_positive_int,
         metavar="DEPTH",
-        help="limit depth below the starting directory",
+        help="limit levels displayed below the starting directory",
     )
     return parser.parse_args(argv)
 
