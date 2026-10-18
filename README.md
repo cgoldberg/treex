@@ -14,7 +14,7 @@
 `treex` is a command-line utility that recursively scans a directory and lists
 its contents as a tree along with file and directory metadata.
 
-Features:
+### Features:
 
 - Respects `.gitignore` rules when Git is installed
 - Shows human-readable file sizes
