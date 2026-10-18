@@ -12,13 +12,13 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: "3.11"
-            toxenv: py310
+            toxenv: py311
           - os: ubuntu-latest
             python-version: "3.15"
             toxenv: py315
           - os: windows-latest
             python-version: "3.11"
-            toxenv: py310
+            toxenv: py311
           - os: windows-latest
             python-version: "3.15"
             toxenv: py315
