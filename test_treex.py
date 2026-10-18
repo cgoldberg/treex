@@ -504,7 +504,7 @@ class TestCollectTree:
 
 
 class TestPrintTree:
-    def test_prints_files_and_directories(self, tmp_path, capsys):
+    def test_includes_files_and_directories(self, tmp_path, capsys):
         (tmp_path / "dir").mkdir()
         (tmp_path / "file.txt").write_bytes(b"hello")
         stats = treex.print_tree(tmp_path)
@@ -584,6 +584,47 @@ class TestPrintTree:
         assert "5 B" in output
         assert stats["directories"] == 2
         assert stats["files"] == 1
+
+    def test_include_matches_relative_path(self, tmp_path, capsys):
+        src = tmp_path / "src"
+        tests = tmp_path / "tests"
+        src.mkdir()
+        tests.mkdir()
+        (src / "app.py").write_bytes(b"hello")
+        (tests / "app.py").write_bytes(b"world")
+        stats = treex.print_tree(tmp_path, include_pattern="src/*.py")
+        output = capsys.readouterr().out
+        assert "src" in output
+        assert "app.py" in output
+        assert "tests" not in output
+        assert stats["files"] == 1
+        assert stats["total_size"] == 5
+
+    def test_exclude_matches_relative_path(self, tmp_path, capsys):
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tmp_path / "app.py").write_bytes(b"hello")
+        (tests / "test_app.py").write_bytes(b"world")
+        stats = treex.print_tree(tmp_path, exclude_pattern="tests/*.py")
+        output = capsys.readouterr().out
+        assert "app.py" in output
+        assert "test_app.py" not in output
+        assert stats["files"] == 1
+        assert stats["total_size"] == 5
+
+    def test_include_matches_nested_relative_paths(self, tmp_path, capsys):
+        nested = tmp_path / "src" / "nested"
+        nested.mkdir(parents=True)
+        (tmp_path / "src" / "app.py").write_bytes(b"hello")
+        (nested / "helper.py").write_bytes(b"world")
+        (tmp_path / "other.py").write_bytes(b"!")
+        stats = treex.print_tree(tmp_path, include_pattern="src/*.py")
+        output = capsys.readouterr().out
+        assert "app.py" in output
+        assert "helper.py" in output
+        assert "other.py" not in output
+        assert stats["files"] == 2
+        assert stats["total_size"] == 10
 
     def test_directory_size_is_recursive(self, tmp_path, capsys):
         directory = tmp_path / "dir"

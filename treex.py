@@ -170,9 +170,9 @@ def _get_tree_entries(path, gitignore):
     return entries
 
 
-def _matches_pattern(name, pattern):
-    """Match a filename using a case-sensitive glob."""
-    return pattern is not None and fnmatch.fnmatchcase(name, pattern)
+def _matches_pattern(path, pattern):
+    """Match a relative path using a case-sensitive glob."""
+    return pattern is not None and fnmatch.fnmatchcase(path, pattern)
 
 
 def _scan_tree(
@@ -184,14 +184,18 @@ def _scan_tree(
     exclude_pattern=None,
     max_depth=None,
     depth=0,
+    root=None,
 ):
     """Scan and filter the tree, returning nodes for rendering.
 
     The starting directory has depth 0. Its immediate entries have
     depth 1. Directories at the depth limit are shown without
-    descending into them. Directory sizes include only files within
+    descending into them. Include/exclude patterns match paths relative
+    to the starting directory. Directory sizes include only files within
     the permitted depth that pass the include/exclude filters.
     """
+    if root is None:
+        root = path.resolve()
     if max_depth is not None and depth >= max_depth:
         return []
     entries = _get_tree_entries(path, gitignore)
@@ -223,6 +227,7 @@ def _scan_tree(
                     exclude_pattern,
                     max_depth,
                     entry_depth,
+                    root,
                 )
             contains_match = any(child["contains_match"] for child in children)
             if include_pattern is not None and not contains_match:
@@ -244,12 +249,12 @@ def _scan_tree(
             continue
         if not entry.is_file():
             continue
+        relative_path = entry.relative_to(root).as_posix()
         # Exclusions take precedence over inclusions
-        if _matches_pattern(entry.name, exclude_pattern):
+        if _matches_pattern(relative_path, exclude_pattern):
             continue
         if include_pattern is not None and not _matches_pattern(
-            entry.name,
-            include_pattern,
+            relative_path, include_pattern
         ):
             continue
         if show_metadata:
@@ -477,13 +482,13 @@ def parse_args(argv=None):
         "--include",
         "-i",
         metavar="PATTERN",
-        help="include files matching a glob pattern",
+        help="include paths matching a glob pattern",
     )
     parser.add_argument(
         "--exclude",
         "-e",
         metavar="PATTERN",
-        help="exclude files matching a glob pattern",
+        help="exclude paths matching a glob pattern",
     )
     parser.add_argument(
         "--depth",

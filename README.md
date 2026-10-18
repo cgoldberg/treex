@@ -68,7 +68,8 @@ its contents as a tree along with file and directory metadata.
 
 ## Installation
 
-Install `treex` from [PyPI][pypi-home] using your preferred Python package manager:
+Install `treex` from [PyPI][pypi-home] using your preferred Python package
+manager:
 
 - **pip**: `pip install treex-cli`
 - **pipx**: `pipx install treex-cli`
@@ -95,36 +96,38 @@ options:
   --quiet, -q            don't show file metadata
   --dirs, -d             show directories only
   --summary, -s          show summary only
-  --include, -i PATTERN  include files matching a glob pattern
-  --exclude, -e PATTERN  exclude files matching a glob pattern
+  --include, -i PATTERN  include paths matching a glob pattern
+  --exclude, -e PATTERN  exclude paths matching a glob pattern
   --depth, -D DEPTH      limit levels displayed below the starting directory
 ```
 
-### Filtering files
+### Filtering paths
 
-Use `--include` to display only files that match a glob pattern:
+Use `--include` to display only paths matching a glob pattern:
 
 ```
 treex --include '*.py'
 ```
 
-Use `--exclude` to hide files that match a glob pattern:
+Use `--exclude` to hide paths matching a glob pattern:
 
 ```
 treex --exclude '*.pyc'
 ```
 
-Patterns match filenames only, regardless of their location in the directory
-tree. Matching is case-sensitive. When both options are provided, exclusions
-take precedence over inclusions.
+Patterns match paths relative to the starting directory, using forward slashes
+as separators. Matching is case-sensitive, and `*` matches across directory
+separators. Exclusions take precedence over inclusions.
 
 For example:
 
 ```
-treex --include '.py' --exclude 'test_.py'
+treex --include '*.py'
+treex --exclude '*.pyc'
+treex --include '*.py' --exclude 'test_*.py'
+treex --include 'src/*.py'
+treex --exclude 'tests/*.py'
 ```
-
-This displays Python files except those whose filenames begin with `test_`.
 
 Note: quote glob patterns to prevent the shell from expanding them before
 `treex` receives them.
@@ -152,5 +155,5 @@ the include/exclude filters.
 
 [github-profile]: https://github.com/cgoldberg
 [github-repo]: https://github.com/cgoldberg/treex
-[pypi-home]: https://pypi.org/project/treex-cli
 [mit-license]: https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/LICENSE
+[pypi-home]: https://pypi.org/project/treex-cli
