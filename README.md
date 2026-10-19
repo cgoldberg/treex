@@ -1,9 +1,8 @@
 # treex
 
-## Cross-Platform, Git-Aware Directory Tree Utility
+## Git-Aware Directory Tree Utility
 
-Cross-platform command-line directory tree utility with metadata and Git ignore
-support.
+Cross-platform command-line directory tree utility with metadata and Git ignore support.
 
 - **Development:** [GitHub][github-repo]
 - **Releases:** [PyPI][pypi-home]
