@@ -65,7 +65,7 @@ output.
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.13+
 - UTF-8-compatible terminal
 
 ----

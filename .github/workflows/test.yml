@@ -11,14 +11,20 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            python-version: "3.11"
-            toxenv: py311
+            python-version: "3.13"
+            toxenv: py313
+          - os: ubuntu-latest
+            python-version: "3.14"
+            toxenv: py314
           - os: ubuntu-latest
             python-version: "3.15"
             toxenv: py315
           - os: windows-latest
-            python-version: "3.11"
-            toxenv: py311
+            python-version: "3.13"
+            toxenv: py313
+          - os: windows-latest
+            python-version: "3.14"
+            toxenv: py314
           - os: windows-latest
             python-version: "3.15"
             toxenv: py315
@@ -35,7 +41,6 @@ jobs:
       - name: Install dependencies
         run: pip install tox
       - name: Validate project configuration
-        if: matrix.os == 'ubuntu-latest'
         run: tox
         env:
           TOXENV: validate

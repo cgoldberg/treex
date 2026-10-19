@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "treex-cli"
-version = "0.1.13.dev0"
+version = "0.1.13.dev1"
 description="Command-line directory tree utility with metadata and Git ignore support"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "Corey Goldberg"}]
 maintainers = [{name = "Corey Goldberg"}]
 readme = "README.md"
-requires-python = ">= 3.11"
+requires-python = ">= 3.13"
 keywords = [
     "tree", "cli", "directories", "files",
     "git", "gitignore", "gitoxide", "metadata",
@@ -22,8 +22,6 @@ classifiers = [
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3.14",
         "Programming Language :: Python :: 3.15",
@@ -39,8 +37,10 @@ source = "https://github.com/cgoldberg/treex"
 download = "https://pypi.org/project/treex-cli"
 
 [dependency-groups]
-dev = [
-    "tox",
+build = [
+    "build",
+    "cibuildwheel",
+    "twine",
 ]
 lint = [
     "ruff==0.17.1",
@@ -63,6 +63,14 @@ where = ["src"]
 target = "treex._native"
 path = "Cargo.toml"
 binding = "PyO3"
+py-limited-api = true
+
+[tool.cibuildwheel]
+build = "cp313-*"
+
+[tool.cibuildwheel.linux]
+before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal"
+environment = { PATH = "$HOME/.cargo/bin:$PATH" }
 
 [tool.pytest]
 addopts = ["-v"]
@@ -73,7 +81,7 @@ tmp_path_retention_policy = "none"
 [tool.ruff]
 line-length = 88
 respect-gitignore = true
-target-version = "py311"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["ALL"]
