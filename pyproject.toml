@@ -43,13 +43,13 @@ dev = [
     "tox",
 ]
 lint = [
-    "ruff",
+    "ruff==0.17.1",
 ]
 test = [
-    "pytest",
+    "pytest==9.1.1",
 ]
 validate = [
-    "validate-pyproject[all]",
+    "validate-pyproject[all]==0.26",
 ]
 
 [tool.setuptools]
