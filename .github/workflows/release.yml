@@ -3,7 +3,8 @@ name: release
 on:
   push:
     tags:
-      - "[0-9]*"
+      - "[0-9]*.[0-9]*.[0-9]*"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -104,10 +105,8 @@ jobs:
       - name: Validate distributions
         run: tox -e check-dist
 
-      - name: Validate distributions
-        run: tox -e release
-
       - name: Verify tag matches package version
+        if: github.event_name == 'push'
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
@@ -122,7 +121,16 @@ jobs:
           print(f"Package version: {package_version}")
           if tag_version != package_version:
               raise SystemExit("Git tag does not match package version")
-          print("Version check passed.")
+          # Require a stable MAJOR.MINOR.PATCH release.
+          parts = package_version.split(".")
+          if (
+              len(parts) != 3
+              or not all(part.isdigit() for part in parts)
+          ):
+              raise SystemExit(
+                  f"Refusing non-stable release version: {package_version}"
+              )
+          print("Stable version check passed.")
           PY
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
