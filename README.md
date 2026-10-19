@@ -143,20 +143,6 @@ regex syntax. Exclusions take precedence over inclusions.
 Note: quote glob and regex patterns to prevent the shell from interpreting them
 before `treex` receives them.
 
-### Limiting tree depth
-
-Use `--depth` (or `-D`) to limit how many levels below the starting directory
-are displayed:
-
-```
-treex --depth 3
-```
-
-The depth must be at least 1.
-
-Directory sizes and summary totals reflect only files within the limit that pass
-the include/exclude filters.
-
 ----
 
 ## Screenshot
