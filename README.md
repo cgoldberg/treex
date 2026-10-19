@@ -1,27 +1,32 @@
 # treex
 
-## List directory contents as a tree with file and directory metadata
+## Cross-Platform, Git-Aware Directory Tree Utility
 
-- Copyright (c) 2026 [Corey Goldberg][github-profile]
-- Development: [GitHub][github-repo]
-- Releases: [PyPI][pypi-home]
-- License: [MIT][mit-license]
+Cross-platform command-line directory tree utility with metadata and Git ignore
+support.
+
+- **Development:** [GitHub][github-repo]
+- **Releases:** [PyPI][pypi-home]
+- **License:** [MIT][mit-license]
+- **Copyright:** © 2026 [Corey Goldberg][github-profile]
 
 ----
 
 ## About
 
-`treex` is a command-line utility that recursively scans a directory and lists
-its contents as a tree along with file and directory metadata.
+`treex` recursively scans a directory and displays its contents as a tree,
+including file and directory metadata. It respects `.gitignore` rules inside Git
+repositories and provides additional options for filtering and customizing the
+output.
 
-### Features:
+### Features
 
 - Respects `.gitignore` rules inside Git repositories
-- Shows human-readable file sizes
-- Shows recursive directory sizes
-- Shows line counts for text files
+- Displays human-readable file sizes
+- Displays recursive directory sizes
+- Displays line counts for text files
 - Identifies binary and unreadable files by type
-- Optionally shows modification timestamps
+- Optionally displays modification timestamps
 - Optionally includes or excludes paths using glob patterns
 - Optionally includes or excludes paths using regular expressions
 - Optionally limits the depth of the displayed tree
@@ -61,8 +66,19 @@ its contents as a tree along with file and directory metadata.
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.11+
 - UTF-8-compatible terminal
+
+----
+
+## Installation
+
+Install `treex` from [PyPI][pypi-home] using your preferred Python package
+manager:
+
+- **pip**: `pip install treex-cli`
+- **pipx**: `pipx install treex-cli`
+- **uv**: `uv tool install treex-cli`
 
 ----
 
@@ -75,17 +91,6 @@ executable. Git does not need to be installed for ignore matching to work.
 When the specified directory is inside a Git working tree, `treex` respects
 applicable `.gitignore` rules by default. Outside a Git working tree, Git ignore
 filtering is disabled. Use `--all` to include files ignored by Git.
-
-----
-
-## Installation
-
-Install `treex` from [PyPI][pypi-home] using your preferred Python package
-manager:
-
-- **pip**: `pip install treex-cli`
-- **pipx**: `pipx install treex-cli`
-- **uv**: `uv tool install treex-cli`
 
 ----
 
