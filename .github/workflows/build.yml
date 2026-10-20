@@ -11,7 +11,7 @@ jobs:
   tests:
     name: Run test workflow
     uses: ./.github/workflows/test.yml
-  sdist:
+  build:
     name: Build source distribution
     runs-on: ubuntu-26.04
     needs: tests
@@ -28,15 +28,15 @@ jobs:
       - name: Build sdist
         run: tox
         env:
-          TOXENV: sdist
+          TOXENV: build
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/*.tar.gz
           if-no-files-found: error
-  wheels:
-    name: Wheels (${{ matrix.name }})
+  wheel:
+    name: Build wheels (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     needs: tests
     strategy:

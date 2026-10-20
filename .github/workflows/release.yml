@@ -30,7 +30,7 @@ jobs:
           check-latest: true
       - name: Install Python dependencies
         run: python -m pip install --upgrade pip tox
-      - name: Download all distributions
+      - name: Download all built distributions
         uses: actions/download-artifact@v4
         with:
           pattern: "*"
@@ -39,7 +39,7 @@ jobs:
       - name: Validate built distributions
         run: tox
         env:
-          TOXENV: check-sdist
+          TOXENV: check-dist
       - name: Verify tag matches package version
         if: github.event_name == 'push'
         env:
