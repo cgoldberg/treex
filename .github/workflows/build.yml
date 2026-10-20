@@ -1,0 +1,72 @@
+name: build
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Run test workflow
+    uses: ./.github/workflows/test.yml
+  sdist:
+    name: Build source distribution
+    runs-on: ubuntu-26.04
+    needs: tests
+    steps:
+      - name: Checkout repo
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          check-latest: true
+      - name: Install Python dependencies
+        run: python -m pip install --upgrade pip tox
+      - name: Build sdist
+        run: tox
+        env:
+          TOXENV: sdist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+  wheels:
+    name: Wheels (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    needs: tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-26.04
+          - name: linux-aarch64
+            os: ubuntu-26.04-arm
+          - name: macos-arm64
+            os: macos-14
+          - name: windows-x86_64
+            os: windows-latest
+    steps:
+      - name: Checkout repo
+      - uses: actions/checkout@v7
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          check-latest: true
+      - name: Install Python dependencies
+        run: python -m pip install --upgrade pip tox
+      - name: Build wheels
+        run: tox
+        env:
+          TOXENV: wheel
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.name }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
