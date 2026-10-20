@@ -15,7 +15,7 @@ jobs:
   publish:
     name: Validate and publish to PyPI
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     environment:
       name: pypi
     permissions:

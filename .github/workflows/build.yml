@@ -28,14 +28,14 @@ jobs:
       - name: Build sdist
         run: tox
         env:
-          TOXENV: build
+          TOXENV: sdist
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/*.tar.gz
           if-no-files-found: error
-  wheel:
+  wheel-dist:
     name: Build wheels (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     needs: tests
