@@ -35,7 +35,7 @@ jobs:
             toxenv: py315
     steps:
       - name: Checkout repo
-      - uses: actions/checkout@v7
+        uses: actions/checkout@v7
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Set up Python ${{ matrix.python-version }}

@@ -17,7 +17,7 @@ jobs:
     needs: tests
     steps:
       - name: Checkout repo
-      - uses: actions/checkout@v7
+        uses: actions/checkout@v7
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -53,7 +53,7 @@ jobs:
             os: windows-latest
     steps:
       - name: Checkout repo
-      - uses: actions/checkout@v7
+        uses: actions/checkout@v7
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Set up Python
