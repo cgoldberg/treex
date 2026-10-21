@@ -37,7 +37,7 @@ repository = "https://github.com/cgoldberg/treex"
 
 [dependency-groups]
 build = [
-    "cibuildwheel==4.3.2",
+    "cibuildwheel==4.3.3",
 ]
 lint = [
     "ruff==0.17.1",
