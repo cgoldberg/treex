@@ -167,13 +167,13 @@ Prebuilt wheels are available for Python 3.13+ on the following platforms:
 | macOS         | Apple Silicon (ARM64)         |
 | Windows       | 32-bit (x86), 64-bit (x86_64) |
 
-These prebuilt [binary wheels][python-wheels] let you install the
-[`treex-cli` package][pypi-files] without compiling the Rust extension yourself.
+These prebuilt [binary wheels][python-wheels] let you install the `treex-cli`
+package without compiling the Rust extension yourself.
 
 ### Installing on other platforms
 
 If a prebuilt binary is not available for your platform, you can install the
-package from the source distribution on PyPI or directly from the
+package from the [source distribution on PyPI][pypi-files] or directly from the
 [source repository][github-repo]. This requires a Rust toolchain.
 
 For more information about installing Rust, see the
