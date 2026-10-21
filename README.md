@@ -1,6 +1,6 @@
 # treex
 
-## Git-Aware Directory Tree Utility
+## Git-aware directory tree utility
 
 Command-line directory tree utility with metadata and Git ignore support.
 
@@ -44,7 +44,7 @@ output.
     </td>
   </tr>
   <tr>
-    <td>Tests (CI)</td>
+    <td>Tests</td>
     <td>
       <a href="https://github.com/cgoldberg/treex/actions/workflows/test.yml">
         <img src="https://github.com/cgoldberg/treex/actions/workflows/test.yml/badge.svg">
@@ -78,6 +78,9 @@ manager:
 - **pip**: `pip install treex-cli`
 - **pipx**: `pipx install treex-cli`
 - **uv**: `uv tool install treex-cli`
+
+Prebuilt wheels are available for common platforms. See
+[Platform Support](#platform-support) for details.
 
 ----
 
@@ -153,8 +156,34 @@ before `treex` receives them.
 
 ![Screenshot](https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/screenshot.png)
 
+## Platform support
+
+Prebuilt wheels are available for Python 3.13+ on the following platforms:
+
+| Platform      | Architecture                  |
+| ------------- | ----------------------------- |
+| Linux (glibc) | x86_64, aarch64               |
+| Linux (musl)  | x86_64, aarch64               |
+| macOS         | Apple Silicon (ARM64)         |
+| Windows       | 32-bit (x86), 64-bit (x86_64) |
+
+These prebuilt [binary wheels][python-wheels] let you install the
+[`treex-cli` package][pypi-files] without compiling the Rust extension yourself.
+
+### Installing on other platforms
+
+If a prebuilt binary is not available for your platform, you can install the
+package from the source distribution on PyPI or directly from the
+[source repository][github-repo]. This requires a Rust toolchain.
+
+For more information about installing Rust, see the
+[official Rust installation guide][rust-install]
+
 [github-profile]: https://github.com/cgoldberg
 [github-repo]: https://github.com/cgoldberg/treex
 [gitoxide-home]: https://rustutils.com/tools/gitoxide
 [mit-license]: https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/LICENSE
+[pypi-files]: https://pypi.org/project/treex-cli/#files
 [pypi-home]: https://pypi.org/project/treex-cli
+[python-wheels]: https://packaging.python.org/en/latest/specifications/binary-distribution-format
+[rust-install]: https://www.rust-lang.org/tools/install
