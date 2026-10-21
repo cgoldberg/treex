@@ -36,7 +36,7 @@ jobs:
           path: dist/*.tar.gz
           if-no-files-found: error
   wheel-dist:
-    name: Build wheels (${{ matrix.name }})
+    name: Build and test wheels (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     needs: tests
     strategy:
