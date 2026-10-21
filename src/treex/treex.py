@@ -468,7 +468,7 @@ def parse_args(argv=None):
         "-V",
         "--version",
         action="version",
-        version=(f"%(prog)s {__version__} "),
+        version=f"treex {__version__}",
         help="show version information and exit",
     )
     parser.add_argument(

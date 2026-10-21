@@ -1109,7 +1109,7 @@ class TestArgumentParsing:
             treex.parse_args([option])
         assert exc_info.value.code == 0
         output = capsys.readouterr().out
-        assert treex.__version__ in output
+        assert output.strip() == f"treex {treex.__version__}"
 
     def test_all(self):
         args = treex.parse_args(["--all"])
