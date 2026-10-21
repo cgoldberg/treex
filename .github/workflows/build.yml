@@ -36,7 +36,7 @@ jobs:
           path: dist/*.tar.gz
           if-no-files-found: error
   wheel-dist:
-    name: Build and test wheels (${{ matrix.name }})
+    name: Build wheels (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     needs: tests
     strategy:
@@ -62,7 +62,7 @@ jobs:
           check-latest: true
       - name: Install Python dependencies
         run: python -m pip install --upgrade pip tox
-      - name: Build wheels
+      - name: Build and test wheels
         run: tox
         env:
           TOXENV: wheel-dist
