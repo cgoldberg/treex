@@ -455,6 +455,7 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="List directory contents as a tree "
         "with file and directory metadata.",
+        usage="treex [OPTIONS] [directory]",
         formatter_class=formatter,
     )
     parser.add_argument(

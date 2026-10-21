@@ -99,9 +99,8 @@ filtering is disabled. Use `--all` to include files ignored by Git.
 ## Usage
 
 ```
-usage: treex [-h] [-V] [-a] [-m] [-q] [-d] [-s] [-i PATTERN] [-e PATTERN]
-             [-I PATTERN] [-E PATTERN] [-D DEPTH]
-             [directory]
+$ treex --help
+usage: treex [OPTIONS] [directory]
 
 List directory contents as a tree with file and directory metadata.
 

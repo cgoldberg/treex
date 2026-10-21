@@ -1103,6 +1103,14 @@ class TestArgumentParsing:
         args = treex.parse_args(["/tmp/project"])
         assert args.directory == Path("/tmp/project")
 
+    @pytest.mark.parametrize("option", ["-h", "--help"])
+    def test_custom_usage_in_help(self, option, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            treex.parse_args([option])
+        assert exc_info.value.code == 0
+        output = capsys.readouterr().out
+        assert output.splitlines()[0] == "usage: treex [OPTIONS] [directory]"
+
     @pytest.mark.parametrize("option", ["-V", "--version"])
     def test_version(self, option, capsys):
         with pytest.raises(SystemExit) as exc_info:
@@ -1111,60 +1119,105 @@ class TestArgumentParsing:
         output = capsys.readouterr().out
         assert output.strip() == f"treex {treex.__version__}"
 
-    def test_all(self):
-        args = treex.parse_args(["--all"])
+    @pytest.mark.parametrize("option", ["-a", "--all"])
+    def test_all(self, option):
+        args = treex.parse_args([option])
         assert args.all is True
 
-    def test_modified(self):
-        args = treex.parse_args(["--modified"])
+    @pytest.mark.parametrize("option", ["-m", "--modified"])
+    def test_modified(self, option):
+        args = treex.parse_args([option])
         assert args.modified is True
 
-    def test_quiet(self):
-        args = treex.parse_args(["--quiet"])
+    @pytest.mark.parametrize("option", ["-q", "--quiet"])
+    def test_quiet(self, option):
+        args = treex.parse_args([option])
         assert args.quiet is True
 
-    def test_dirs(self):
-        args = treex.parse_args(["--dirs"])
+    @pytest.mark.parametrize("option", ["-d", "--dirs"])
+    def test_dirs(self, option):
+        args = treex.parse_args([option])
         assert args.dirs is True
 
-    def test_summary(self):
-        args = treex.parse_args(["--summary"])
+    @pytest.mark.parametrize("option", ["-s", "--summary"])
+    def test_summary(self, option):
+        args = treex.parse_args([option])
         assert args.summary is True
 
-    def test_include(self):
-        args = treex.parse_args(["--include", "*.py"])
+    @pytest.mark.parametrize("option", ["-i", "--include"])
+    def test_include(self, option):
+        args = treex.parse_args([option, "*.py"])
         assert args.include == "*.py"
 
-    def test_exclude(self):
-        args = treex.parse_args(["--exclude", "*.pyc"])
+    @pytest.mark.parametrize("option", ["-e", "--exclude"])
+    def test_exclude(self, option):
+        args = treex.parse_args([option, "*.pyc"])
         assert args.exclude == "*.pyc"
 
-    def test_include_regex(self):
-        args = treex.parse_args(["--include-regex", r"\.py$"])
+    @pytest.mark.parametrize("option", ["-I", "--include-regex"])
+    def test_include_regex(self, option):
+        args = treex.parse_args([option, r"\.py$"])
         assert args.include_regex == r"\.py$"
 
-    def test_exclude_regex(self):
-        args = treex.parse_args(["--exclude-regex", r"test_"])
+    @pytest.mark.parametrize("option", ["-E", "--exclude-regex"])
+    def test_exclude_regex(self, option):
+        args = treex.parse_args([option, r"test_"])
         assert args.exclude_regex == r"test_"
 
-    def test_depth(self):
-        args = treex.parse_args(["--depth", "3"])
+    @pytest.mark.parametrize("option", ["-D", "--depth"])
+    def test_depth(self, option):
+        args = treex.parse_args([option, "3"])
         assert args.depth == 3
 
+    @pytest.mark.parametrize("option", ["-D", "--depth"])
     @pytest.mark.parametrize("depth", ["0", "-1"])
-    def test_depth_must_be_positive(self, depth, capsys):
+    def test_depth_must_be_positive(self, option, depth, capsys):
         with pytest.raises(SystemExit) as exc_info:
-            treex.parse_args(["--depth", depth])
+            treex.parse_args([option, depth])
         assert exc_info.value.code == 2
         assert "must be at least 1" in capsys.readouterr().err
 
-    def test_depth_must_be_integer(self, capsys):
+    @pytest.mark.parametrize("option", ["-D", "--depth"])
+    def test_depth_must_be_integer(self, option, capsys):
         with pytest.raises(SystemExit) as exc_info:
-            treex.parse_args(["--depth", "abc"])
+            treex.parse_args([option, "abc"])
         assert exc_info.value.code == 2
         assert "must be a positive integer" in capsys.readouterr().err
 
-    def test_all_options_combined(self):
+    def test_all_short_options_combined(self):
+        args = treex.parse_args(
+            [
+                "-a",
+                "-m",
+                "-q",
+                "-d",
+                "-s",
+                "-i",
+                "*.py",
+                "-e",
+                "test_*.py",
+                "-I",
+                r"^src/",
+                "-E",
+                r"(^|/)generated/",
+                "-D",
+                "3",
+                "/tmp/project",
+            ]
+        )
+        assert args.all is True
+        assert args.modified is True
+        assert args.quiet is True
+        assert args.dirs is True
+        assert args.summary is True
+        assert args.include == "*.py"
+        assert args.exclude == "test_*.py"
+        assert args.include_regex == r"^src/"
+        assert args.exclude_regex == r"(^|/)generated/"
+        assert args.depth == 3
+        assert args.directory == Path("/tmp/project")
+
+    def test_all_long_options_combined(self):
         args = treex.parse_args(
             [
                 "--all",
@@ -1185,48 +1238,17 @@ class TestArgumentParsing:
                 "/tmp/project",
             ]
         )
+        assert args.all is True
+        assert args.modified is True
+        assert args.quiet is True
+        assert args.dirs is True
+        assert args.summary is True
+        assert args.include == "*.py"
+        assert args.exclude == "test_*.py"
+        assert args.include_regex == r"^src/"
+        assert args.exclude_regex == r"(^|/)generated/"
+        assert args.depth == 3
         assert args.directory == Path("/tmp/project")
-        assert args.all is True
-        assert args.modified is True
-        assert args.quiet is True
-        assert args.dirs is True
-        assert args.summary is True
-        assert args.include == "*.py"
-        assert args.exclude == "test_*.py"
-        assert args.include_regex == r"^src/"
-        assert args.exclude_regex == r"(^|/)generated/"
-        assert args.depth == 3
-
-    def test_all_short_options_combined(self):
-        args = treex.parse_args(
-            [
-                "-a",
-                "-m",
-                "-q",
-                "-d",
-                "-i",
-                "*.py",
-                "-e",
-                "test_*.py",
-                "-I",
-                r"^src/",
-                "-E",
-                r"(^|/)generated/",
-                "-D",
-                "3",
-                "-s",
-            ]
-        )
-        assert args.all is True
-        assert args.modified is True
-        assert args.quiet is True
-        assert args.dirs is True
-        assert args.include == "*.py"
-        assert args.exclude == "test_*.py"
-        assert args.include_regex == r"^src/"
-        assert args.exclude_regex == r"(^|/)generated/"
-        assert args.depth == 3
-        assert args.summary is True
 
 
 class TestMain:
