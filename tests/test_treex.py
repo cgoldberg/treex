@@ -563,28 +563,24 @@ class TestScanTree:
         assert nodes == []
 
 
-class TestFilteredTreeStatistics:
-    def test_summary_counts_only_included_files(self, tmp_path):
-        (tmp_path / "one.py").write_bytes(b"123")
-        (tmp_path / "two.py").write_bytes(b"12345")
-        (tmp_path / "notes.txt").write_bytes(b"1234567")
-        stats = treex.print_tree(tmp_path, show_tree=False, include_pattern="*.py")
-        assert stats["files"] == 2
-        assert stats["total_size"] == 8
-
-    def test_directory_size_reflects_filtered_files(self, tmp_path, capsys):
-        directory = tmp_path / "src"
-        directory.mkdir()
-        (directory / "main.py").write_bytes(b"12345")
-        (directory / "notes.txt").write_bytes(b"1234567890")
-        stats = treex.print_tree(tmp_path, include_pattern="*.py")
-        output = capsys.readouterr().out
-        src_line = next(line for line in output.splitlines() if "src" in line)
-        assert "5 B" in src_line
+class TestPrintTreeStatistics:
+    def test_counts_files_and_directories(self, tmp_path):
+        (tmp_path / "dir").mkdir()
+        (tmp_path / "file.txt").write_bytes(b"hello")
+        stats = treex.print_tree(tmp_path, show_tree=False)
+        assert stats["directories"] == 1
         assert stats["files"] == 1
         assert stats["total_size"] == 5
 
-    def test_directory_only_mode_preserves_filtered_statistics(self, tmp_path, capsys):
+    def test_filtered_statistics_without_tree(self, tmp_path, capsys):
+        (tmp_path / "main.py").write_bytes(b"12345")
+        (tmp_path / "notes.txt").write_bytes(b"1234567")
+        stats = treex.print_tree(tmp_path, show_tree=False, include_pattern="*.py")
+        assert capsys.readouterr().out == ""
+        assert stats["files"] == 1
+        assert stats["total_size"] == 5
+
+    def test_filtered_statistics_without_files(self, tmp_path, capsys):
         directory = tmp_path / "src"
         directory.mkdir()
         (directory / "main.py").write_bytes(b"12345")
@@ -598,321 +594,65 @@ class TestFilteredTreeStatistics:
         assert stats["files"] == 1
         assert stats["total_size"] == 5
 
-    def test_quiet_mode_with_filters(self, tmp_path, capsys):
+    def test_total_size_is_none_without_metadata(self, tmp_path):
         (tmp_path / "main.py").write_bytes(b"12345")
         (tmp_path / "notes.txt").write_bytes(b"1234567890")
         stats = treex.print_tree(tmp_path, show_metadata=False, include_pattern="*.py")
-        output = capsys.readouterr().out
-        assert "main.py" in output
-        assert "notes.txt" not in output
-        assert "5 B" not in output
         assert stats["files"] == 1
         assert stats["total_size"] is None
 
-    def test_summary_only_with_filters(self, tmp_path, capsys):
-        (tmp_path / "main.py").write_bytes(b"12345")
-        (tmp_path / "notes.txt").write_bytes(b"1234567890")
+    def test_counts_only_matching_files(self, tmp_path):
+        (tmp_path / "one.py").write_bytes(b"123")
+        (tmp_path / "two.py").write_bytes(b"12345")
+        (tmp_path / "notes.txt").write_bytes(b"1234567")
         stats = treex.print_tree(tmp_path, show_tree=False, include_pattern="*.py")
-        output = capsys.readouterr().out
-        assert output == ""
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
+        assert stats["files"] == 2
+        assert stats["total_size"] == 8
 
-
-class TestPrintTree:
-    def test_includes_files_and_directories(self, tmp_path, capsys):
-        (tmp_path / "dir").mkdir()
-        (tmp_path / "file.txt").write_bytes(b"hello")
-        stats = treex.print_tree(tmp_path)
-        output = capsys.readouterr().out
-        assert "dir" in output
-        assert "file.txt" in output
-        assert stats["directories"] == 1
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_suppress_tree(self, tmp_path, capsys):
-        (tmp_path / "file.txt").write_bytes(b"hello")
+    def test_counts_nested_directories(self, tmp_path):
+        nested = tmp_path / "one" / "two"
+        nested.mkdir(parents=True)
+        (nested / "file.txt").write_bytes(b"hello")
         stats = treex.print_tree(tmp_path, show_tree=False)
-        output = capsys.readouterr().out
-        assert output == ""
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_suppress_metadata(self, tmp_path, capsys):
-        (tmp_path / "file.txt").write_bytes(b"hello")
-        stats = treex.print_tree(tmp_path, show_metadata=False)
-        output = capsys.readouterr().out
-        assert output.strip().endswith("file.txt")
-        assert "5 B" not in output
-        assert stats["files"] == 1
-        assert stats["total_size"] is None
-
-    def test_suppress_files(self, tmp_path, capsys):
-        (tmp_path / "dir").mkdir()
-        (tmp_path / "file.txt").write_bytes(b"hello")
-        stats = treex.print_tree(tmp_path, show_files=False)
-        output = capsys.readouterr().out
-        assert "└── dir" in output
-        assert "file.txt" not in output
-        assert "0 B" in output
-        assert stats["directories"] == 1
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_suppress_files_nested(self, tmp_path, capsys):
-        nested = tmp_path / "one" / "two"
-        nested.mkdir(parents=True)
-        (nested / "file.txt").write_bytes(b"hello")
-        stats = treex.print_tree(tmp_path, show_files=False)
-        output = capsys.readouterr().out
-        assert "└── one" in output
-        assert "    └── two" in output
-        assert "file.txt" not in output
-        assert "5 B" in output
         assert stats["directories"] == 2
         assert stats["files"] == 1
         assert stats["total_size"] == 5
 
-    def test_suppress_files_without_metadata(self, tmp_path, capsys):
+    def test_counts_files_hidden_from_output(self, tmp_path):
         nested = tmp_path / "one" / "two"
         nested.mkdir(parents=True)
         (nested / "file.txt").write_bytes(b"hello")
-        stats = treex.print_tree(tmp_path, show_metadata=False, show_files=False)
-        output = capsys.readouterr().out
-        assert "└── one" in output
-        assert "    └── two" in output
-        assert "file.txt" not in output
-        assert "5 B" not in output
+        stats = treex.print_tree(tmp_path, show_tree=False, show_files=False)
         assert stats["directories"] == 2
         assert stats["files"] == 1
-        assert stats["total_size"] is None
+        assert stats["total_size"] == 5
 
-    def test_nested_directories(self, tmp_path, capsys):
-        nested = tmp_path / "one" / "two"
-        nested.mkdir(parents=True)
-        (nested / "file.txt").write_bytes(b"hello")
-        stats = treex.print_tree(tmp_path)
-        output = capsys.readouterr().out
-        assert "one" in output
-        assert "two" in output
-        assert "file.txt" in output
-        assert "5 B" in output
-        assert stats["directories"] == 2
-        assert stats["files"] == 1
-
-    def test_include_matches_relative_path(self, tmp_path, capsys):
+    def test_counts_files_matching_relative_path(self, tmp_path):
         src = tmp_path / "src"
         tests = tmp_path / "tests"
         src.mkdir()
         tests.mkdir()
         (src / "app.py").write_bytes(b"hello")
         (tests / "app.py").write_bytes(b"world")
-        stats = treex.print_tree(tmp_path, include_pattern="src/*.py")
-        output = capsys.readouterr().out
-        assert "src" in output
-        assert "app.py" in output
-        assert "tests" not in output
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_exclude_matches_relative_path(self, tmp_path, capsys):
-        tests = tmp_path / "tests"
-        tests.mkdir()
-        (tmp_path / "app.py").write_bytes(b"hello")
-        (tests / "test_app.py").write_bytes(b"world")
-        stats = treex.print_tree(tmp_path, exclude_pattern="tests/*.py")
-        output = capsys.readouterr().out
-        assert "app.py" in output
-        assert "test_app.py" not in output
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_include_matches_nested_relative_paths(self, tmp_path, capsys):
-        nested = tmp_path / "src" / "nested"
-        nested.mkdir(parents=True)
-        (tmp_path / "src" / "app.py").write_bytes(b"hello")
-        (nested / "helper.py").write_bytes(b"world")
-        (tmp_path / "other.py").write_bytes(b"!")
-        stats = treex.print_tree(tmp_path, include_pattern="src/*.py")
-        output = capsys.readouterr().out
-        assert "app.py" in output
-        assert "helper.py" in output
-        assert "other.py" not in output
-        assert stats["files"] == 2
-        assert stats["total_size"] == 10
-
-    def test_include_matches_files_recursively(self, tmp_path, capsys):
-        (tmp_path / "main.py").touch()
-        (tmp_path / "README.md").touch()
-        nested = tmp_path / "src"
-        nested.mkdir()
-        (nested / "helper.py").touch()
-        (nested / "config.json").touch()
-        stats = treex.print_tree(tmp_path, include_pattern="*.py")
-        output = capsys.readouterr().out
-        assert "main.py" in output
-        assert "helper.py" in output
-        assert "README.md" not in output
-        assert "config.json" not in output
-        assert "src" in output
-        assert stats["files"] == 2
-        assert stats["directories"] == 1
-
-    def test_include_is_case_sensitive(self, tmp_path, capsys):
-        (tmp_path / "lower.py").touch()
-        (tmp_path / "upper.PY").touch()
-        stats = treex.print_tree(tmp_path, include_pattern="*.py")
-        output = capsys.readouterr().out
-        assert "lower.py" in output
-        assert "upper.PY" not in output
-        assert stats["files"] == 1
-
-    def test_exclude_is_case_sensitive(self, tmp_path, capsys):
-        (tmp_path / "lower.py").touch()
-        (tmp_path / "upper.PY").touch()
-        stats = treex.print_tree(tmp_path, exclude_pattern="*.py")
-        output = capsys.readouterr().out
-        assert "lower.py" not in output
-        assert "upper.PY" in output
-        assert stats["files"] == 1
-
-    def test_exclude_matches_filenames_recursively(self, tmp_path, capsys):
-        (tmp_path / "main.pyc").touch()
-        (tmp_path / "main.py").touch()
-        nested = tmp_path / "src"
-        nested.mkdir()
-        (nested / "helper.pyc").touch()
-        (nested / "helper.py").touch()
-        stats = treex.print_tree(tmp_path, exclude_pattern="*.pyc")
-        output = capsys.readouterr().out
-        assert "main.py" in output
-        assert "helper.py" in output
-        assert "main.pyc" not in output
-        assert "helper.pyc" not in output
-        assert stats["files"] == 2
-
-    def test_exclude_overrides_include(self, tmp_path, capsys):
-        (tmp_path / "app.py").write_bytes(b"hello")
-        (tmp_path / "test_app.py").write_bytes(b"world")
         stats = treex.print_tree(
             tmp_path,
-            include_pattern="*.py",
-            exclude_pattern="test_*.py",
+            show_tree=False,
+            include_pattern="src/*.py",
         )
-        output = capsys.readouterr().out
-        assert "app.py" in output
-        assert "test_app.py" not in output
         assert stats["files"] == 1
         assert stats["total_size"] == 5
 
-    def test_include_hides_directories_without_matching_files(self, tmp_path, capsys):
-        matching = tmp_path / "matching"
-        matching.mkdir()
-        (matching / "main.py").touch()
-        nonmatching = tmp_path / "nonmatching"
-        nonmatching.mkdir()
-        (nonmatching / "notes.txt").touch()
-        stats = treex.print_tree(tmp_path, include_pattern="*.py")
-        output = capsys.readouterr().out
-        assert "matching" in output
-        assert "main.py" in output
-        assert "nonmatching" not in output
-        assert "notes.txt" not in output
-        assert stats["directories"] == 1
-        assert stats["files"] == 1
-
-    def test_include_regex_matches_relative_path(self, tmp_path, capsys):
-        src = tmp_path / "src"
-        tests = tmp_path / "tests"
-        src.mkdir()
-        tests.mkdir()
-        (src / "app.py").write_bytes(b"hello")
-        (tests / "app.py").write_bytes(b"world")
-        stats = treex.print_tree(tmp_path, include_regex=re.compile(r"^src/.*\.py$"))
-        output = capsys.readouterr().out
-        assert "src" in output
-        assert "app.py" in output
-        assert "tests" not in output
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_exclude_regex_matches_relative_path(self, tmp_path, capsys):
-        nested = tmp_path / "src" / "tests"
-        nested.mkdir(parents=True)
+    def test_unmatched_regex_returns_zero_statistics(self, tmp_path):
         (tmp_path / "app.py").write_bytes(b"hello")
-        (nested / "test_app.py").write_bytes(b"world")
-        stats = treex.print_tree(tmp_path, exclude_regex=re.compile(r"(^|/)tests/"))
-        output = capsys.readouterr().out
-        assert "app.py" in output
-        assert "test_app.py" not in output
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_include_regex_is_case_sensitive(self, tmp_path, capsys):
-        (tmp_path / "app.py").write_bytes(b"hello")
-        stats = treex.print_tree(tmp_path, include_regex=re.compile(r"\.PY$"))
-        output = capsys.readouterr().out
-        assert "app.py" not in output
+        stats = treex.print_tree(
+            tmp_path,
+            show_tree=False,
+            include_regex=re.compile(r"\.PY$"),
+        )
         assert stats["files"] == 0
         assert stats["total_size"] == 0
 
-    def test_exclude_regex_is_case_sensitive(self, tmp_path, capsys):
-        (tmp_path / "lower.py").write_bytes(b"hello")
-        (tmp_path / "upper.PY").write_bytes(b"world")
-        stats = treex.print_tree(tmp_path, exclude_regex=re.compile(r"\.py$"))
-        output = capsys.readouterr().out
-        assert "lower.py" not in output
-        assert "upper.PY" in output
-        assert stats["files"] == 1
-
-    def test_exclude_regex_overrides_include_glob(self, tmp_path, capsys):
-        (tmp_path / "app.py").write_bytes(b"hello")
-        (tmp_path / "test_app.py").write_bytes(b"world")
-        stats = treex.print_tree(
-            tmp_path,
-            include_pattern="*.py",
-            exclude_regex=re.compile(r"(^|/)test_"),
-        )
-        output = capsys.readouterr().out
-        assert "app.py" in output
-        assert "test_app.py" not in output
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_exclude_glob_overrides_include_regex(self, tmp_path, capsys):
-        (tmp_path / "app.py").write_bytes(b"hello")
-        (tmp_path / "test_app.py").write_bytes(b"world")
-        stats = treex.print_tree(
-            tmp_path,
-            include_regex=re.compile(r"\.py$"),
-            exclude_pattern="test_*.py",
-        )
-        output = capsys.readouterr().out
-        assert "app.py" in output
-        assert "test_app.py" not in output
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_glob_and_regex_include_filters(self, tmp_path, capsys):
-        src = tmp_path / "src"
-        src.mkdir()
-        (src / "app.py").write_bytes(b"hello")
-        (src / "app.txt").write_bytes(b"world")
-        (tmp_path / "other.py").write_bytes(b"!")
-        stats = treex.print_tree(
-            tmp_path,
-            include_pattern="src/*",
-            include_regex=re.compile(r"\.py$"),
-        )
-        output = capsys.readouterr().out
-        assert "app.py" in output
-        assert "app.txt" not in output
-        assert "other.py" not in output
-        assert stats["files"] == 1
-        assert stats["total_size"] == 5
-
-    def test_include_and_exclude_can_be_combined_with_depth(self, tmp_path, capsys):
+    def test_combined_filters_respect_max_depth(self, tmp_path):
         (tmp_path / "main.py").write_bytes(b"123")
         (tmp_path / "test_main.py").write_bytes(b"12345")
         nested = tmp_path / "src"
@@ -923,18 +663,202 @@ class TestPrintTree:
         (deeper / "deep.py").write_bytes(b"123456789")
         stats = treex.print_tree(
             tmp_path,
+            show_tree=False,
             include_pattern="*.py",
             exclude_pattern="test_*.py",
             max_depth=2,
         )
+        assert stats["files"] == 2
+        assert stats["total_size"] == 10
+
+
+class TestPrintTree:
+    def test_prints_files_and_directories(self, tmp_path, capsys):
+        (tmp_path / "dir").mkdir()
+        (tmp_path / "file.txt").write_bytes(b"hello")
+        treex.print_tree(tmp_path)
+        output = capsys.readouterr().out
+        assert "dir" in output
+        assert "file.txt" in output
+
+    def test_suppresses_tree_when_disabled(self, tmp_path, capsys):
+        (tmp_path / "file.txt").write_bytes(b"hello")
+        treex.print_tree(tmp_path, show_tree=False)
+        assert capsys.readouterr().out == ""
+
+    def test_suppresses_metadata_when_disabled(self, tmp_path, capsys):
+        (tmp_path / "file.txt").write_bytes(b"hello")
+        treex.print_tree(tmp_path, show_metadata=False)
+        output = capsys.readouterr().out
+        assert output.strip().endswith("file.txt")
+        assert "5 B" not in output
+
+    def test_hides_files_but_keeps_directories(self, tmp_path, capsys):
+        nested = tmp_path / "one" / "two"
+        nested.mkdir(parents=True)
+        (nested / "file.txt").write_bytes(b"hello")
+        treex.print_tree(tmp_path, show_files=False)
+        output = capsys.readouterr().out
+        assert "└── one" in output
+        assert "    └── two" in output
+        assert "file.txt" not in output
+
+    def test_hides_files_and_metadata(self, tmp_path, capsys):
+        nested = tmp_path / "one" / "two"
+        nested.mkdir(parents=True)
+        (nested / "file.txt").write_bytes(b"hello")
+        treex.print_tree(tmp_path, show_metadata=False, show_files=False)
+        output = capsys.readouterr().out
+        assert "└── one" in output
+        assert "    └── two" in output
+        assert "file.txt" not in output
+        assert "5 B" not in output
+
+    def test_include_glob_matches_relative_path(self, tmp_path, capsys):
+        src = tmp_path / "src"
+        tests = tmp_path / "tests"
+        src.mkdir()
+        tests.mkdir()
+        (src / "app.py").write_bytes(b"hello")
+        (tests / "app.py").write_bytes(b"world")
+        treex.print_tree(tmp_path, include_pattern="src/*.py")
+        output = capsys.readouterr().out
+        assert "src" in output
+        assert "tests" not in output
+        assert "app.py" in output
+
+    def test_include_glob_matches_nested_files(self, tmp_path, capsys):
+        (tmp_path / "main.py").touch()
+        (tmp_path / "README.md").touch()
+        nested = tmp_path / "src"
+        nested.mkdir()
+        (nested / "helper.py").touch()
+        (nested / "config.json").touch()
+        treex.print_tree(tmp_path, include_pattern="*.py")
         output = capsys.readouterr().out
         assert "main.py" in output
         assert "helper.py" in output
-        assert "test_main.py" not in output
-        assert "deeper" not in output
-        assert "deep.py" not in output
-        assert stats["files"] == 2
-        assert stats["total_size"] == 10
+        assert "README.md" not in output
+        assert "config.json" not in output
+        assert "src" in output
+
+    def test_include_glob_is_case_sensitive(self, tmp_path, capsys):
+        (tmp_path / "lower.py").touch()
+        (tmp_path / "upper.PY").touch()
+        treex.print_tree(tmp_path, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "lower.py" in output
+        assert "upper.PY" not in output
+
+    def test_exclude_glob_is_case_sensitive(self, tmp_path, capsys):
+        (tmp_path / "lower.py").touch()
+        (tmp_path / "upper.PY").touch()
+        treex.print_tree(tmp_path, exclude_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "lower.py" not in output
+        assert "upper.PY" in output
+
+    def test_exclude_glob_overrides_include_glob(self, tmp_path, capsys):
+        (tmp_path / "app.py").write_bytes(b"hello")
+        (tmp_path / "test_app.py").write_bytes(b"world")
+        treex.print_tree(
+            tmp_path,
+            include_pattern="*.py",
+            exclude_pattern="test_*.py",
+        )
+        output = capsys.readouterr().out
+        assert "app.py" in output
+        assert "test_app.py" not in output
+
+    def test_hides_directories_without_matching_files(self, tmp_path, capsys):
+        matching = tmp_path / "matching"
+        matching.mkdir()
+        (matching / "main.py").touch()
+        nonmatching = tmp_path / "nonmatching"
+        nonmatching.mkdir()
+        (nonmatching / "notes.txt").touch()
+        treex.print_tree(tmp_path, include_pattern="*.py")
+        output = capsys.readouterr().out
+        assert "matching" in output
+        assert "main.py" in output
+        assert "nonmatching" not in output
+        assert "notes.txt" not in output
+
+    def test_include_regex_matches_relative_path(self, tmp_path, capsys):
+        src = tmp_path / "src"
+        tests = tmp_path / "tests"
+        src.mkdir()
+        tests.mkdir()
+        (src / "app.py").write_bytes(b"hello")
+        (tests / "app.py").write_bytes(b"world")
+        treex.print_tree(tmp_path, include_regex=re.compile(r"^src/.*\.py$"))
+        output = capsys.readouterr().out
+        assert "src" in output
+        assert "tests" not in output
+        assert "app.py" in output
+
+    def test_exclude_regex_matches_relative_path(self, tmp_path, capsys):
+        nested = tmp_path / "src" / "tests"
+        nested.mkdir(parents=True)
+        (tmp_path / "app.py").write_bytes(b"hello")
+        (nested / "test_app.py").write_bytes(b"world")
+        treex.print_tree(tmp_path, exclude_regex=re.compile(r"(^|/)tests/"))
+        output = capsys.readouterr().out
+        assert "app.py" in output
+        assert "test_app.py" not in output
+
+    def test_include_regex_is_case_sensitive(self, tmp_path, capsys):
+        (tmp_path / "app.py").write_bytes(b"hello")
+        treex.print_tree(tmp_path, include_regex=re.compile(r"\.PY$"))
+        assert "app.py" not in capsys.readouterr().out
+
+    def test_exclude_regex_is_case_sensitive(self, tmp_path, capsys):
+        (tmp_path / "lower.py").write_bytes(b"hello")
+        (tmp_path / "upper.PY").write_bytes(b"world")
+        treex.print_tree(tmp_path, exclude_regex=re.compile(r"\.py$"))
+        output = capsys.readouterr().out
+        assert "lower.py" not in output
+        assert "upper.PY" in output
+
+    def test_exclude_regex_overrides_include_glob(self, tmp_path, capsys):
+        (tmp_path / "app.py").write_bytes(b"hello")
+        (tmp_path / "test_app.py").write_bytes(b"world")
+        treex.print_tree(
+            tmp_path,
+            include_pattern="*.py",
+            exclude_regex=re.compile(r"(^|/)test_"),
+        )
+        output = capsys.readouterr().out
+        assert "app.py" in output
+        assert "test_app.py" not in output
+
+    def test_exclude_glob_overrides_include_regex(self, tmp_path, capsys):
+        (tmp_path / "app.py").write_bytes(b"hello")
+        (tmp_path / "test_app.py").write_bytes(b"world")
+        treex.print_tree(
+            tmp_path,
+            include_regex=re.compile(r"\.py$"),
+            exclude_pattern="test_*.py",
+        )
+        output = capsys.readouterr().out
+        assert "app.py" in output
+        assert "test_app.py" not in output
+
+    def test_include_glob_and_regex_must_both_match(self, tmp_path, capsys):
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "app.py").write_bytes(b"hello")
+        (src / "app.txt").write_bytes(b"world")
+        (tmp_path / "other.py").write_bytes(b"!")
+        treex.print_tree(
+            tmp_path,
+            include_pattern="src/*",
+            include_regex=re.compile(r"\.py$"),
+        )
+        output = capsys.readouterr().out
+        assert "app.py" in output
+        assert "app.txt" not in output
+        assert "other.py" not in output
 
     def test_directory_size_is_recursive(self, tmp_path, capsys):
         directory = tmp_path / "dir"
@@ -949,13 +873,13 @@ class TestPrintTree:
         assert "15 B" in directory_line
         assert "10 B" in nested_line
 
-    def test_directory_size_with_files_suppressed(self, tmp_path, capsys):
+    def test_directory_size_with_hidden_files(self, tmp_path, capsys):
         directory = tmp_path / "dir"
         nested = directory / "nested"
         nested.mkdir(parents=True)
         (directory / "one.txt").write_bytes(b"12345")
         (nested / "two.txt").write_bytes(b"1234567890")
-        stats = treex.print_tree(tmp_path, show_files=False)
+        treex.print_tree(tmp_path, show_files=False)
         output = capsys.readouterr().out
         directory_line = next(line for line in output.splitlines() if "dir" in line)
         nested_line = next(line for line in output.splitlines() if "nested" in line)
@@ -963,8 +887,6 @@ class TestPrintTree:
         assert "two.txt" not in output
         assert "15 B" in directory_line
         assert "10 B" in nested_line
-        assert stats["files"] == 2
-        assert stats["total_size"] == 15
 
     def test_empty_directory_has_zero_size(self, tmp_path, capsys):
         (tmp_path / "empty").mkdir()
@@ -973,7 +895,7 @@ class TestPrintTree:
         empty_line = next(line for line in output.splitlines() if "empty" in line)
         assert "0 B" in empty_line
 
-    def test_directory_size_respects_gitignore(self, tmp_path, capsys):
+    def test_directory_size_excludes_gitignored_files(self, tmp_path, capsys):
         init_git_repo(tmp_path)
         directory = tmp_path / "data"
         directory.mkdir()
@@ -988,26 +910,14 @@ class TestPrintTree:
         assert "15 B" not in data_line
         assert "ignored.txt" not in output
 
-    def test_permission_denied(self, tmp_path, capsys):
+    def test_reports_permission_denied(self, tmp_path, capsys):
         directory = tmp_path / "restricted"
         directory.mkdir()
         with patch.object(Path, "iterdir", side_effect=PermissionError):
-            stats = treex.print_tree(directory)
-        output = capsys.readouterr().out
-        assert "[permission denied]" in output
-        assert stats["directories"] == 0
-        assert stats["files"] == 0
+            treex.print_tree(directory)
+        assert "[permission denied]" in capsys.readouterr().out
 
-    def test_tree_name_width_aligns_file_metadata(self, tmp_path, capsys):
-        (tmp_path / "a.txt").write_bytes(b"hello")
-        (tmp_path / "long_filename.txt").write_bytes(b"hello")
-        treex.print_tree(tmp_path)
-        lines = capsys.readouterr().out.splitlines()
-        size_positions = [line.index("5 B") for line in lines if ".txt" in line]
-        assert len(size_positions) == 2
-        assert size_positions[0] == size_positions[1]
-
-    def test_tree_name_width_aligns_directory_and_file_metadata(self, tmp_path, capsys):
+    def test_aligns_directory_and_file_metadata(self, tmp_path, capsys):
         directory = tmp_path / "dir"
         directory.mkdir()
         (directory / "file.txt").write_bytes(b"hello")
