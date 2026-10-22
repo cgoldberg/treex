@@ -10,4 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.30", features = ["extension-module", "abi3-py313"] }
-gix = { version = "0.89", default-features = false, features = ["excludes", "index", "sha1"] }
+gix = { version = "0.90", default-features = false, features = ["excludes", "index", "sha1"] }

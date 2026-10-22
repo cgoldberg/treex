@@ -37,16 +37,16 @@ repository = "https://github.com/cgoldberg/treex"
 
 [dependency-groups]
 build = [
-    "cibuildwheel==4.3.3",
+    "cibuildwheel==4.3.4",
 ]
 lint = [
-    "ruff==0.17.1",
+    "ruff==0.17.2",
 ]
 test = [
     "pytest==9.1.1",
 ]
 validate = [
-    "validate-pyproject[all]==0.26",
+    "validate-pyproject[all]==0.27",
 ]
 
 [tool.setuptools]
