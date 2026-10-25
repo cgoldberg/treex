@@ -1019,7 +1019,7 @@ class TestArgumentParsing:
             treex.parse_args([option])
         assert exc_info.value.code == 0
         output = capsys.readouterr().out
-        assert output.splitlines()[0] == "usage: treex [OPTIONS] [directory]"
+        assert output.splitlines()[0] == f"usage: {treex.PROG} [OPTIONS] [directory]"
 
     @pytest.mark.parametrize("option", ["-V", "--version"])
     def test_version(self, option, capsys):
@@ -1027,7 +1027,7 @@ class TestArgumentParsing:
             treex.parse_args([option])
         assert exc_info.value.code == 0
         output = capsys.readouterr().out
-        assert output.strip() == f"treex {treex.__version__}"
+        assert output.strip() == f"{treex.PROG} {treex.__version__}"
 
     @pytest.mark.parametrize("option", ["-a", "--all"])
     def test_all(self, option):
@@ -1164,7 +1164,7 @@ class TestArgumentParsing:
 class TestMain:
     def test_success(self, tmp_path, capsys):
         (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
-        with patch.object(sys, "argv", ["treex", str(tmp_path)]):
+        with patch.object(sys, "argv", [treex.PROG, str(tmp_path)]):
             assert treex.main() == 0
         output = capsys.readouterr().out
         assert str(tmp_path) in output
@@ -1176,7 +1176,7 @@ class TestMain:
         directory = tmp_path / "dir"
         directory.mkdir()
         (tmp_path / "file.txt").write_text("hello", encoding="utf-8")
-        with patch.object(sys, "argv", ["treex", "--dirs", str(tmp_path)]):
+        with patch.object(sys, "argv", [treex.PROG, "--dirs", str(tmp_path)]):
             assert treex.main() == 0
         output = capsys.readouterr().out
         assert str(tmp_path) in output
@@ -1188,13 +1188,13 @@ class TestMain:
     def test_not_a_directory(self, tmp_path, capsys):
         path = tmp_path / "file.txt"
         path.write_text("hello", encoding="utf-8")
-        with patch.object(sys, "argv", ["treex", str(path)]):
+        with patch.object(sys, "argv", [treex.PROG, str(path)]):
             assert treex.main() == 1
         assert f"Not a directory: {path}" in capsys.readouterr().err
 
     def test_keyboard_interrupt(self, tmp_path, capsys):
         with (
-            patch.object(sys, "argv", ["treex", str(tmp_path)]),
+            patch.object(sys, "argv", [treex.PROG, str(tmp_path)]),
             patch.object(treex, "print_tree", side_effect=KeyboardInterrupt),
         ):
             assert treex.main() == 130

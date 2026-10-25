@@ -29,6 +29,9 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 
+PROG = "treex"
+
+
 class GitIgnore:
     """Apply Git ignore rules using Gitoxide when inside a repository."""
 
@@ -455,7 +458,7 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="List directory contents as a tree "
         "with file and directory metadata.",
-        usage="treex [OPTIONS] [directory]",
+        usage=f"{PROG} [OPTIONS] [directory]",
         formatter_class=formatter,
     )
     parser.add_argument(
@@ -469,7 +472,7 @@ def parse_args(argv=None):
         "-V",
         "--version",
         action="version",
-        version=f"treex {__version__}",
+        version=f"{PROG} {__version__}",
         help="show version information and exit",
     )
     parser.add_argument(
