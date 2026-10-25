@@ -87,8 +87,8 @@ Prebuilt wheels are available for common platforms. See
 ## Git ignore support
 
 `treex` uses [Gitoxide][gitoxide-home] (`gix`), a native Rust implementation of
-Git functionality, to evaluate `.gitignore` rules without invoking the Git
-executable. Git does not need to be installed for ignore matching to work.
+Git, to evaluate `.gitignore` rules without invoking the Git executable. Git
+does not need to be installed for ignore matching to work.
 
 When the specified directory is inside a Git working tree, `treex` respects
 applicable `.gitignore` rules by default. Outside a Git working tree, Git ignore
