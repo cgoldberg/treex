@@ -65,12 +65,10 @@ py-limited-api = true
 
 [tool.cibuildwheel]
 build = "cp313-*"
-test-requires = ["pytest==9.1.1"]
-test-command = "pytest {project}/tests"
-
-[tool.cibuildwheel.linux]
 before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal"
 environment = { PATH = "$HOME/.cargo/bin:$PATH" }
+test-requires = ["pytest==9.1.1"]
+test-command = "pytest {project}/tests"
 
 [tool.pytest]
 addopts = ["-v"]
