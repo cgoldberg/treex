@@ -45,7 +45,6 @@ jobs:
         env:
           TOXENV: validate
       - name: Run linting and formatting
-        if: matrix.os == 'ubuntu-latest'
         run: tox
         env:
           TOXENV: lint
