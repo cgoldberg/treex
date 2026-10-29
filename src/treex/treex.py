@@ -64,7 +64,7 @@ class GitIgnore:
         matcher_paths = []
         for path in paths:
             try:
-                relative = path.resolve().relative_to(self.repo_root)
+                relative = path.relative_to(self.repo_root)
             except (ValueError, OSError):
                 continue
             candidates.append(path)
