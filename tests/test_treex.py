@@ -223,7 +223,7 @@ class TestGitIgnore:
         ignored_dir.mkdir()
         paths = [ignored_file, normal_file, ignored_dir]
         gitignore = treex.GitIgnore(tmp_path)
-        assert gitignore.ignored_many(paths) == {"debug.log", "build"}
+        assert gitignore.ignored_many(paths) == {ignored_file, ignored_dir}
 
     def test_ignored_many_handles_spaces(self, tmp_path):
         init_git_repo(tmp_path)
@@ -234,7 +234,7 @@ class TestGitIgnore:
         ignored_dir.mkdir()
         paths = [ignored_file, ignored_dir]
         gitignore = treex.GitIgnore(tmp_path)
-        assert gitignore.ignored_many(paths) == {"debug output.log", "build output"}
+        assert gitignore.ignored_many(paths) == {ignored_file, ignored_dir}
 
     def test_missing_git_index(self, tmp_path):
         init_git_repo(tmp_path)
@@ -260,7 +260,7 @@ class TestTreeEntries:
         (tmp_path / "Docs").mkdir()
         (tmp_path / ".git").mkdir()
         entries = treex._get_tree_entries(tmp_path, gitignore=None)
-        assert [entry.name for entry in entries] == [
+        assert [entry[0].name for entry in entries] == [
             ".git",
             "Docs",
             "src",
@@ -278,7 +278,7 @@ class TestTreeEntries:
         link = tmp_path / "link.txt"
         link.symlink_to(target)
         entries = treex._get_tree_entries(tmp_path, gitignore=None)
-        assert [entry.name for entry in entries] == ["target.txt"]
+        assert [entry[0].name for entry in entries] == ["target.txt"]
 
 
 class TestCollectTree:
@@ -380,7 +380,7 @@ class TestCollectTree:
     def test_collect_tree_permission_denied(self, tmp_path):
         rows = []
         stats = {"directories": 0, "files": 0, "total_size": 0}
-        with patch.object(Path, "iterdir", side_effect=PermissionError):
+        with patch("os.scandir", side_effect=PermissionError):
             treex._collect_tree(tmp_path, "", stats, None, rows, True, False, True)
         assert rows == [("└── [permission denied]", None)]
         assert stats["directories"] == 0
@@ -561,6 +561,22 @@ class TestScanTree:
             max_depth=2,
         )
         assert nodes == []
+
+    def test_relative_prefix_matches_nested_paths(self, tmp_path):
+        nested = tmp_path / "nested"
+        nested.mkdir()
+        (nested / "app.py").touch()
+        (nested / "notes.txt").touch()
+        nodes = treex._scan_tree(
+            nested,
+            None,
+            False,
+            False,
+            include_pattern="src/*.py",
+            relative_prefix="src",
+        )
+        assert [node["name"] for node in nodes] == ["app.py"]
+        assert nodes[0]["contains_match"] is True
 
 
 class TestPrintTreeStatistics:
@@ -913,7 +929,7 @@ class TestPrintTree:
     def test_reports_permission_denied(self, tmp_path, capsys):
         directory = tmp_path / "restricted"
         directory.mkdir()
-        with patch.object(Path, "iterdir", side_effect=PermissionError):
+        with patch("os.scandir", side_effect=PermissionError):
             treex.print_tree(directory)
         assert "[permission denied]" in capsys.readouterr().out
 

@@ -15,6 +15,7 @@ the filesystem is scanned normally without Git filtering.
 
 import argparse
 import fnmatch
+import os
 import re
 import sys
 from datetime import datetime
@@ -56,26 +57,29 @@ class GitIgnore:
         """Check if Git considers a path ignored."""
         return bool(self.ignored_many([path]))
 
-    def ignored_many(self, paths):
-        """Check which paths Git considers ignored."""
+    def ignored_many(self, paths, directory_flags=None):
+        """Return the paths that Git considers ignored."""
         if not self.enabled or self.repo_root is None or self.matcher is None:
             return set()
-        relative_paths = []
+        candidates = []
         matcher_paths = []
         for path in paths:
             try:
-                relative = path.resolve().relative_to(self.repo_root)
+                relative = path.relative_to(self.repo_root)
             except (ValueError, OSError):
                 continue
-            relative_paths.append(relative.as_posix())
-            matcher_paths.append((relative.as_posix(), path.is_dir()))
+            candidates.append(path)
+            is_dir = (
+                directory_flags[path]
+                if directory_flags is not None and path in directory_flags
+                else path.is_dir()
+            )
+            matcher_paths.append((relative.as_posix(), is_dir))
         if not matcher_paths:
             return set()
         results = self.matcher.ignored_many(matcher_paths)
         return {
-            relative
-            for relative, ignored in zip(relative_paths, results, strict=True)
-            if ignored
+            path for path, ignored in zip(candidates, results, strict=True) if ignored
         }
 
 
@@ -128,7 +132,14 @@ def _count_lines(path):
 
 
 def _file_metadata(path):
-    """Get file metadata."""
+    """Collect file metadata, identifying binary files and counting text lines.
+
+    Reads files in chunks to avoid loading large files into memory. Checks
+    the initial bytes for NUL characters and invalid UTF-8 to identify binary
+    files, and counts lines for text files in a single pass. Empty files are
+    handled without opening them. Returns formatted size, line count or file
+    status, byte size, and modification time.
+    """
     try:
         stat = path.stat()
         size = stat.st_size
@@ -136,37 +147,71 @@ def _file_metadata(path):
     except OSError:
         return "?", "[unreadable]", 0, None
     size_text = _format_size(size)
-    if _is_binary_file(path):
+    if size == 0:
+        return size_text, "0 lines", size, modified
+    try:
+        f = path.open("rb")
+    except OSError:
         return size_text, "[binary]", size, modified
-    lines = _count_lines(path)
-    if lines is None:
-        return size_text, "[unreadable]", size, modified
+    with f:
+        try:
+            chunk = f.read(8192)
+        except OSError:
+            return size_text, "[binary]", size, modified
+        if chunk:
+            if b"\x00" in chunk:
+                return size_text, "[binary]", size, modified
+            try:
+                chunk.decode("utf-8")
+            except UnicodeDecodeError:
+                return size_text, "[binary]", size, modified
+        lines = chunk.count(b"\n")
+        last_byte = chunk[-1:] if chunk else b""
+        has_data = bool(chunk)
+        # A short read from a regular file normally means EOF.
+        if len(chunk) == 8192:
+            try:
+                while True:
+                    chunk = f.read(65536)
+                    if not chunk:
+                        break
+                    has_data = True
+                    lines += chunk.count(b"\n")
+                    last_byte = chunk[-1:]
+            except OSError:
+                return size_text, "[unreadable]", size, modified
+    if has_data and last_byte != b"\n":
+        lines += 1
     return size_text, f"{lines:,} lines", size, modified
 
 
 def _get_tree_entries(path, gitignore):
-    """Get entries to include in the tree."""
+    """Get entries to include in the tree with cached type information."""
+    typed_entries = []
     try:
-        entries = list(path.iterdir())
+        # Use os.scandir() instead of Path.iterdir(): DirEntry caches
+        # filesystem metadata, reducing extra system calls for type checks.
+        entries = os.scandir(path)
     except PermissionError:
         return None
-    entries = [entry for entry in entries if not entry.is_symlink()]
+    with entries:
+        for dir_entry in entries:
+            if dir_entry.is_symlink():
+                continue
+            is_dir = dir_entry.is_dir(follow_symlinks=False)
+            is_file = dir_entry.is_file(follow_symlinks=False)
+            typed_entries.append((Path(dir_entry.path), is_dir, is_file))
     if gitignore is not None:
-        entries = [entry for entry in entries if entry.name != ".git"]
+        typed_entries = [item for item in typed_entries if item[0].name != ".git"]
         if gitignore.enabled and gitignore.repo_root is not None:
-            ignored = gitignore.ignored_many(entries)
-            filtered_entries = []
-            for entry in entries:
-                try:
-                    relative = entry.resolve().relative_to(gitignore.repo_root)
-                except (ValueError, OSError):
-                    filtered_entries.append(entry)
-                    continue
-                if relative.as_posix() not in ignored:
-                    filtered_entries.append(entry)
-            entries = filtered_entries
-    entries.sort(key=lambda p: (p.is_file(), p.name.casefold()))
-    return entries
+            directory_flags = {entry: is_dir for entry, is_dir, _ in typed_entries}
+            ignored = gitignore.ignored_many(
+                [entry for entry, _, _ in typed_entries],
+                directory_flags,
+            )
+            typed_entries = [item for item in typed_entries if item[0] not in ignored]
+    typed_entries.sort(key=lambda item: (item[2], item[0].name.casefold()))
+    return typed_entries
 
 
 def _matches_pattern(path, pattern):
@@ -186,6 +231,7 @@ def _scan_tree(
     max_depth=None,
     depth=0,
     root=None,
+    relative_prefix="",
 ):
     """Scan and filter the tree, returning nodes for rendering.
 
@@ -197,8 +243,8 @@ def _scan_tree(
     Directory sizes include only files within the permitted depth
     that pass the include/exclude filters.
     """
-    path = path.resolve()
     if root is None:
+        path = path.resolve()
         root = path
     if max_depth is not None and depth >= max_depth:
         return []
@@ -217,14 +263,14 @@ def _scan_tree(
         ]
     nodes = []
     has_include = include_pattern is not None or include_regex is not None
-    for entry in entries:
-        relative_path = entry.relative_to(root).as_posix()
-        # Exclusions take precedence over inclusions.
+    for entry, is_dir, is_file in entries:
+        name = entry.name
+        relative_path = f"{relative_prefix}/{name}" if relative_prefix else name
         if _matches_pattern(relative_path, exclude_pattern):
             continue
         if exclude_regex is not None and exclude_regex.search(relative_path):
             continue
-        if entry.is_dir():
+        if is_dir:
             entry_depth = depth + 1
             if max_depth is not None and entry_depth >= max_depth:
                 children = []
@@ -241,6 +287,7 @@ def _scan_tree(
                     max_depth,
                     entry_depth,
                     root,
+                    relative_path,
                 )
             contains_match = any(child["contains_match"] for child in children)
             if has_include and not contains_match:
@@ -250,7 +297,7 @@ def _scan_tree(
             )
             nodes.append(
                 {
-                    "name": entry.name,
+                    "name": name,
                     "kind": "directory",
                     "children": children,
                     "size": size,
@@ -260,7 +307,7 @@ def _scan_tree(
                 }
             )
             continue
-        if not entry.is_file():
+        if not is_file:
             continue
         if include_pattern is not None and not _matches_pattern(
             relative_path,
@@ -275,7 +322,7 @@ def _scan_tree(
             size_text, info, size, modified = None, None, None, None
         nodes.append(
             {
-                "name": entry.name,
+                "name": name,
                 "kind": "file",
                 "children": [],
                 "size": size,
