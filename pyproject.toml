@@ -37,14 +37,14 @@ repository = "https://github.com/cgoldberg/treex"
 
 [dependency-groups]
 build = [
-    "cibuildwheel==4.3.4",
+    "cibuildwheel==4.3.5",
     "twine==7.0.0",
 ]
 lint = [
     "ruff==0.17.3",
 ]
 test = [
-    "pytest==9.1.1",
+    "pytest==9.2.0",
 ]
 validate = [
     "validate-pyproject[all]==0.27",
@@ -67,8 +67,8 @@ py-limited-api = true
 build = "cp313-*"
 before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal"
 environment = { PATH = "$HOME/.cargo/bin:$PATH" }
-test-requires = ["pytest==9.1.1"]
-test-command = "pytest {project}/tests"
+test-requires = ["pytest==9.2.0"]
+test-command = "pytest {project}"
 
 [tool.pytest]
 addopts = ["-v"]
