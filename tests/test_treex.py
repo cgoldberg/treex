@@ -223,7 +223,7 @@ class TestGitIgnore:
         ignored_dir.mkdir()
         paths = [ignored_file, normal_file, ignored_dir]
         gitignore = treex.GitIgnore(tmp_path)
-        assert gitignore.ignored_many(paths) == {"debug.log", "build"}
+        assert gitignore.ignored_many(paths) == {ignored_file, ignored_dir}
 
     def test_ignored_many_handles_spaces(self, tmp_path):
         init_git_repo(tmp_path)
@@ -234,7 +234,7 @@ class TestGitIgnore:
         ignored_dir.mkdir()
         paths = [ignored_file, ignored_dir]
         gitignore = treex.GitIgnore(tmp_path)
-        assert gitignore.ignored_many(paths) == {"debug output.log", "build output"}
+        assert gitignore.ignored_many(paths) == {ignored_file, ignored_dir}
 
     def test_missing_git_index(self, tmp_path):
         init_git_repo(tmp_path)

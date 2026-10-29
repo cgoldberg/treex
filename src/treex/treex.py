@@ -57,25 +57,23 @@ class GitIgnore:
         return bool(self.ignored_many([path]))
 
     def ignored_many(self, paths):
-        """Check which paths Git considers ignored."""
+        """Return the paths that Git considers ignored."""
         if not self.enabled or self.repo_root is None or self.matcher is None:
             return set()
-        relative_paths = []
+        candidates = []
         matcher_paths = []
         for path in paths:
             try:
                 relative = path.resolve().relative_to(self.repo_root)
             except (ValueError, OSError):
                 continue
-            relative_paths.append(relative.as_posix())
+            candidates.append(path)
             matcher_paths.append((relative.as_posix(), path.is_dir()))
         if not matcher_paths:
             return set()
         results = self.matcher.ignored_many(matcher_paths)
         return {
-            relative
-            for relative, ignored in zip(relative_paths, results, strict=True)
-            if ignored
+            path for path, ignored in zip(candidates, results, strict=True) if ignored
         }
 
 
@@ -187,16 +185,7 @@ def _get_tree_entries(path, gitignore):
         entries = [entry for entry in entries if entry.name != ".git"]
         if gitignore.enabled and gitignore.repo_root is not None:
             ignored = gitignore.ignored_many(entries)
-            filtered_entries = []
-            for entry in entries:
-                try:
-                    relative = entry.resolve().relative_to(gitignore.repo_root)
-                except (ValueError, OSError):
-                    filtered_entries.append(entry)
-                    continue
-                if relative.as_posix() not in ignored:
-                    filtered_entries.append(entry)
-            entries = filtered_entries
+            entries = [entry for entry in entries if entry not in ignored]
     entries.sort(key=lambda p: (p.is_file(), p.name.casefold()))
     return entries
 
