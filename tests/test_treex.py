@@ -380,7 +380,7 @@ class TestCollectTree:
     def test_collect_tree_permission_denied(self, tmp_path):
         rows = []
         stats = {"directories": 0, "files": 0, "total_size": 0}
-        with patch.object(Path, "iterdir", side_effect=PermissionError):
+        with patch("os.scandir", side_effect=PermissionError):
             treex._collect_tree(tmp_path, "", stats, None, rows, True, False, True)
         assert rows == [("└── [permission denied]", None)]
         assert stats["directories"] == 0
@@ -913,7 +913,7 @@ class TestPrintTree:
     def test_reports_permission_denied(self, tmp_path, capsys):
         directory = tmp_path / "restricted"
         directory.mkdir()
-        with patch.object(Path, "iterdir", side_effect=PermissionError):
+        with patch("os.scandir", side_effect=PermissionError):
             treex.print_tree(directory)
         assert "[permission denied]" in capsys.readouterr().out
 

@@ -15,6 +15,7 @@ the filesystem is scanned normally without Git filtering.
 
 import argparse
 import fnmatch
+import os
 import re
 import sys
 from datetime import datetime
@@ -145,23 +146,18 @@ def _file_metadata(path):
         modified = _format_modified(stat.st_mtime)
     except OSError:
         return "?", "[unreadable]", 0, None
-
     size_text = _format_size(size)
-
     if size == 0:
         return size_text, "0 lines", size, modified
-
     try:
         f = path.open("rb")
     except OSError:
         return size_text, "[binary]", size, modified
-
     with f:
         try:
             chunk = f.read(8192)
         except OSError:
             return size_text, "[binary]", size, modified
-
         if chunk:
             if b"\x00" in chunk:
                 return size_text, "[binary]", size, modified
@@ -169,11 +165,9 @@ def _file_metadata(path):
                 chunk.decode("utf-8")
             except UnicodeDecodeError:
                 return size_text, "[binary]", size, modified
-
         lines = chunk.count(b"\n")
         last_byte = chunk[-1:] if chunk else b""
         has_data = bool(chunk)
-
         # A short read from a regular file normally means EOF.
         if len(chunk) == 8192:
             try:
@@ -186,32 +180,34 @@ def _file_metadata(path):
                     last_byte = chunk[-1:]
             except OSError:
                 return size_text, "[unreadable]", size, modified
-
     if has_data and last_byte != b"\n":
         lines += 1
-
     return size_text, f"{lines:,} lines", size, modified
 
 
 def _get_tree_entries(path, gitignore):
     """Get entries to include in the tree with cached type information."""
+    typed_entries = []
     try:
-        entries = list(path.iterdir())
+        # Use os.scandir() instead of Path.iterdir(): DirEntry caches
+        # filesystem metadata, reducing extra system calls for type checks.
+        entries = os.scandir(path)
     except PermissionError:
         return None
-    typed_entries = []
-    for entry in entries:
-        if entry.is_symlink():
-            continue
-        is_dir = entry.is_dir()
-        is_file = entry.is_file()
-        typed_entries.append((entry, is_dir, is_file))
+    with entries:
+        for dir_entry in entries:
+            if dir_entry.is_symlink():
+                continue
+            is_dir = dir_entry.is_dir(follow_symlinks=False)
+            is_file = dir_entry.is_file(follow_symlinks=False)
+            typed_entries.append((Path(dir_entry.path), is_dir, is_file))
     if gitignore is not None:
         typed_entries = [item for item in typed_entries if item[0].name != ".git"]
         if gitignore.enabled and gitignore.repo_root is not None:
             directory_flags = {entry: is_dir for entry, is_dir, _ in typed_entries}
             ignored = gitignore.ignored_many(
-                [entry for entry, _, _ in typed_entries], directory_flags
+                [entry for entry, _, _ in typed_entries],
+                directory_flags,
             )
             typed_entries = [item for item in typed_entries if item[0] not in ignored]
     typed_entries.sort(key=lambda item: (item[2], item[0].name.casefold()))
