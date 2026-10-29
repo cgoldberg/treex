@@ -562,6 +562,22 @@ class TestScanTree:
         )
         assert nodes == []
 
+    def test_relative_prefix_matches_nested_paths(self, tmp_path):
+        nested = tmp_path / "nested"
+        nested.mkdir()
+        (nested / "app.py").touch()
+        (nested / "notes.txt").touch()
+        nodes = treex._scan_tree(
+            nested,
+            None,
+            False,
+            False,
+            include_pattern="src/*.py",
+            relative_prefix="src",
+        )
+        assert [node["name"] for node in nodes] == ["app.py"]
+        assert nodes[0]["contains_match"] is True
+
 
 class TestPrintTreeStatistics:
     def test_counts_files_and_directories(self, tmp_path):

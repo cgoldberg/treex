@@ -310,7 +310,8 @@ def _scan_tree(
         if not is_file:
             continue
         if include_pattern is not None and not _matches_pattern(
-            relative_path, include_pattern
+            relative_path,
+            include_pattern,
         ):
             continue
         if include_regex is not None and not include_regex.search(relative_path):
@@ -331,7 +332,6 @@ def _scan_tree(
                 "contains_match": True,
             }
         )
-
     return nodes
 
 
