@@ -207,6 +207,7 @@ def _scan_tree(
     max_depth=None,
     depth=0,
     root=None,
+    relative_prefix="",
 ):
     """Scan and filter the tree, returning nodes for rendering.
 
@@ -223,6 +224,7 @@ def _scan_tree(
         root = path
     if max_depth is not None and depth >= max_depth:
         return []
+
     entries = _get_tree_entries(path, gitignore)
     if entries is None:
         return [
@@ -236,15 +238,21 @@ def _scan_tree(
                 "contains_match": False,
             }
         ]
+
     nodes = []
     has_include = include_pattern is not None or include_regex is not None
+
     for entry in entries:
-        relative_path = entry.relative_to(root).as_posix()
+        relative_path = (
+            f"{relative_prefix}/{entry.name}" if relative_prefix else entry.name
+        )
+
         # Exclusions take precedence over inclusions.
         if _matches_pattern(relative_path, exclude_pattern):
             continue
         if exclude_regex is not None and exclude_regex.search(relative_path):
             continue
+
         if entry.is_dir():
             entry_depth = depth + 1
             if max_depth is not None and entry_depth >= max_depth:
@@ -262,10 +270,13 @@ def _scan_tree(
                     max_depth,
                     entry_depth,
                     root,
+                    relative_path,
                 )
+
             contains_match = any(child["contains_match"] for child in children)
             if has_include and not contains_match:
                 continue
+
             size = (
                 sum(child["size"] or 0 for child in children) if show_metadata else None
             )
@@ -281,19 +292,22 @@ def _scan_tree(
                 }
             )
             continue
+
         if not entry.is_file():
             continue
+
         if include_pattern is not None and not _matches_pattern(
-            relative_path,
-            include_pattern,
+            relative_path, include_pattern
         ):
             continue
         if include_regex is not None and not include_regex.search(relative_path):
             continue
+
         if show_metadata:
             size_text, info, size, modified = _file_metadata(entry)
         else:
             size_text, info, size, modified = None, None, None, None
+
         nodes.append(
             {
                 "name": entry.name,
@@ -306,6 +320,7 @@ def _scan_tree(
                 "contains_match": True,
             }
         )
+
     return nodes
 
 
