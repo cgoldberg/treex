@@ -133,10 +133,11 @@ def _count_lines(path):
 def _file_metadata(path):
     """Collect file metadata, identifying binary files and counting text lines.
 
-    Reads each file in chunks to avoid loading large files into memory. Checks
+    Reads files in chunks to avoid loading large files into memory. Checks
     the initial bytes for NUL characters and invalid UTF-8 to identify binary
-    files, and counts lines for text files in a single pass. Returns formatted
-    size, line count or file status, byte size, and modification time.
+    files, and counts lines for text files in a single pass. Empty files are
+    handled without opening them. Returns formatted size, line count or file
+    status, byte size, and modification time.
     """
     try:
         stat = path.stat()
@@ -144,16 +145,23 @@ def _file_metadata(path):
         modified = _format_modified(stat.st_mtime)
     except OSError:
         return "?", "[unreadable]", 0, None
+
     size_text = _format_size(size)
+
+    if size == 0:
+        return size_text, "0 lines", size, modified
+
     try:
         f = path.open("rb")
     except OSError:
         return size_text, "[binary]", size, modified
+
     with f:
         try:
             chunk = f.read(8192)
         except OSError:
             return size_text, "[binary]", size, modified
+
         if chunk:
             if b"\x00" in chunk:
                 return size_text, "[binary]", size, modified
@@ -161,21 +169,27 @@ def _file_metadata(path):
                 chunk.decode("utf-8")
             except UnicodeDecodeError:
                 return size_text, "[binary]", size, modified
+
         lines = chunk.count(b"\n")
         last_byte = chunk[-1:] if chunk else b""
         has_data = bool(chunk)
-        try:
-            while True:
-                chunk = f.read(65536)
-                if not chunk:
-                    break
-                has_data = True
-                lines += chunk.count(b"\n")
-                last_byte = chunk[-1:]
-        except OSError:
-            return size_text, "[unreadable]", size, modified
+
+        # A short read from a regular file normally means EOF.
+        if len(chunk) == 8192:
+            try:
+                while True:
+                    chunk = f.read(65536)
+                    if not chunk:
+                        break
+                    has_data = True
+                    lines += chunk.count(b"\n")
+                    last_byte = chunk[-1:]
+            except OSError:
+                return size_text, "[unreadable]", size, modified
+
     if has_data and last_byte != b"\n":
         lines += 1
+
     return size_text, f"{lines:,} lines", size, modified
 
 
