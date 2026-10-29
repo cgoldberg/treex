@@ -219,8 +219,8 @@ def _scan_tree(
     Directory sizes include only files within the permitted depth
     that pass the include/exclude filters.
     """
-    path = path.resolve()
     if root is None:
+        path = path.resolve()
         root = path
     if max_depth is not None and depth >= max_depth:
         return []
