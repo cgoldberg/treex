@@ -56,7 +56,7 @@ class GitIgnore:
         """Check if Git considers a path ignored."""
         return bool(self.ignored_many([path]))
 
-    def ignored_many(self, paths):
+    def ignored_many(self, paths, directory_flags=None):
         """Return the paths that Git considers ignored."""
         if not self.enabled or self.repo_root is None or self.matcher is None:
             return set()
@@ -68,7 +68,12 @@ class GitIgnore:
             except (ValueError, OSError):
                 continue
             candidates.append(path)
-            matcher_paths.append((relative.as_posix(), path.is_dir()))
+            is_dir = (
+                directory_flags[path]
+                if directory_flags is not None and path in directory_flags
+                else path.is_dir()
+            )
+            matcher_paths.append((relative.as_posix(), is_dir))
         if not matcher_paths:
             return set()
         results = self.matcher.ignored_many(matcher_paths)
@@ -175,19 +180,29 @@ def _file_metadata(path):
 
 
 def _get_tree_entries(path, gitignore):
-    """Get entries to include in the tree."""
+    """Get entries to include in the tree with cached type information."""
     try:
         entries = list(path.iterdir())
     except PermissionError:
         return None
-    entries = [entry for entry in entries if not entry.is_symlink()]
+    typed_entries = []
+    for entry in entries:
+        if entry.is_symlink():
+            continue
+        is_dir = entry.is_dir()
+        is_file = entry.is_file()
+        typed_entries.append((entry, is_dir, is_file))
     if gitignore is not None:
-        entries = [entry for entry in entries if entry.name != ".git"]
+        typed_entries = [item for item in typed_entries if item[0].name != ".git"]
         if gitignore.enabled and gitignore.repo_root is not None:
-            ignored = gitignore.ignored_many(entries)
-            entries = [entry for entry in entries if entry not in ignored]
-    entries.sort(key=lambda p: (p.is_file(), p.name.casefold()))
-    return entries
+            directory_flags = {entry: is_dir for entry, is_dir, _ in typed_entries}
+            ignored = gitignore.ignored_many(
+                [entry for entry, _, _ in typed_entries],
+                directory_flags,
+            )
+            typed_entries = [item for item in typed_entries if item[0] not in ignored]
+    typed_entries.sort(key=lambda item: (item[2], item[0].name.casefold()))
+    return typed_entries
 
 
 def _matches_pattern(path, pattern):
@@ -222,6 +237,7 @@ def _scan_tree(
     if root is None:
         path = path.resolve()
         root = path
+
     if max_depth is not None and depth >= max_depth:
         return []
 
@@ -242,18 +258,17 @@ def _scan_tree(
     nodes = []
     has_include = include_pattern is not None or include_regex is not None
 
-    for entry in entries:
+    for entry, is_dir, is_file in entries:
         relative_path = (
             f"{relative_prefix}/{entry.name}" if relative_prefix else entry.name
         )
 
-        # Exclusions take precedence over inclusions.
         if _matches_pattern(relative_path, exclude_pattern):
             continue
         if exclude_regex is not None and exclude_regex.search(relative_path):
             continue
 
-        if entry.is_dir():
+        if is_dir:
             entry_depth = depth + 1
             if max_depth is not None and entry_depth >= max_depth:
                 children = []
@@ -293,7 +308,7 @@ def _scan_tree(
             )
             continue
 
-        if not entry.is_file():
+        if not is_file:
             continue
 
         if include_pattern is not None and not _matches_pattern(

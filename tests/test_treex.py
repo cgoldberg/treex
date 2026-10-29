@@ -260,7 +260,7 @@ class TestTreeEntries:
         (tmp_path / "Docs").mkdir()
         (tmp_path / ".git").mkdir()
         entries = treex._get_tree_entries(tmp_path, gitignore=None)
-        assert [entry.name for entry in entries] == [
+        assert [entry[0].name for entry in entries] == [
             ".git",
             "Docs",
             "src",
@@ -278,7 +278,7 @@ class TestTreeEntries:
         link = tmp_path / "link.txt"
         link.symlink_to(target)
         entries = treex._get_tree_entries(tmp_path, gitignore=None)
-        assert [entry.name for entry in entries] == ["target.txt"]
+        assert [entry[0].name for entry in entries] == ["target.txt"]
 
 
 class TestCollectTree:
