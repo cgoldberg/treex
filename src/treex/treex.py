@@ -197,8 +197,7 @@ def _get_tree_entries(path, gitignore):
         if gitignore.enabled and gitignore.repo_root is not None:
             directory_flags = {entry: is_dir for entry, is_dir, _ in typed_entries}
             ignored = gitignore.ignored_many(
-                [entry for entry, _, _ in typed_entries],
-                directory_flags,
+                [entry for entry, _, _ in typed_entries], directory_flags
             )
             typed_entries = [item for item in typed_entries if item[0] not in ignored]
     typed_entries.sort(key=lambda item: (item[2], item[0].name.casefold()))
@@ -237,10 +236,8 @@ def _scan_tree(
     if root is None:
         path = path.resolve()
         root = path
-
     if max_depth is not None and depth >= max_depth:
         return []
-
     entries = _get_tree_entries(path, gitignore)
     if entries is None:
         return [
@@ -254,20 +251,15 @@ def _scan_tree(
                 "contains_match": False,
             }
         ]
-
     nodes = []
     has_include = include_pattern is not None or include_regex is not None
-
     for entry, is_dir, is_file in entries:
-        relative_path = (
-            f"{relative_prefix}/{entry.name}" if relative_prefix else entry.name
-        )
-
+        name = entry.name
+        relative_path = f"{relative_prefix}/{name}" if relative_prefix else name
         if _matches_pattern(relative_path, exclude_pattern):
             continue
         if exclude_regex is not None and exclude_regex.search(relative_path):
             continue
-
         if is_dir:
             entry_depth = depth + 1
             if max_depth is not None and entry_depth >= max_depth:
@@ -287,17 +279,15 @@ def _scan_tree(
                     root,
                     relative_path,
                 )
-
             contains_match = any(child["contains_match"] for child in children)
             if has_include and not contains_match:
                 continue
-
             size = (
                 sum(child["size"] or 0 for child in children) if show_metadata else None
             )
             nodes.append(
                 {
-                    "name": entry.name,
+                    "name": name,
                     "kind": "directory",
                     "children": children,
                     "size": size,
@@ -307,25 +297,21 @@ def _scan_tree(
                 }
             )
             continue
-
         if not is_file:
             continue
-
         if include_pattern is not None and not _matches_pattern(
             relative_path, include_pattern
         ):
             continue
         if include_regex is not None and not include_regex.search(relative_path):
             continue
-
         if show_metadata:
             size_text, info, size, modified = _file_metadata(entry)
         else:
             size_text, info, size, modified = None, None, None, None
-
         nodes.append(
             {
-                "name": entry.name,
+                "name": name,
                 "kind": "file",
                 "children": [],
                 "size": size,
