@@ -14,9 +14,9 @@ Command-line directory tree utility with metadata and Git ignore support.
 ## About
 
 `treex` recursively scans a directory and displays its contents as a tree,
-including file and directory metadata. It respects `.gitignore` rules inside Git
-repositories and provides additional options for filtering and customizing the
-output.
+including file and directory metadata. It respects
+[Git's ignore rules][git-ignore] and provides additional options for filtering
+and customizing the output.
 
 ### Features
 
@@ -178,6 +178,7 @@ package from the [source distribution on PyPI][pypi-files] or directly from the
 For more information about installing Rust, see the
 [official Rust installation guide][rust-install]
 
+[git-ignore]: https://git-scm.com/docs/gitignore
 [github-profile]: https://github.com/cgoldberg
 [github-repo]: https://github.com/cgoldberg/treex
 [gitoxide-home]: https://rustutils.com/tools/gitoxide
