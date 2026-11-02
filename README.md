@@ -75,9 +75,11 @@ and customizing the output.
 Install `treex` from [PyPI][pypi-home] using your preferred Python package
 manager:
 
-- **pip**: `pip install treex-cli`
-- **pipx**: `pipx install treex-cli`
-- **uv**: `uv tool install treex-cli`
+- **[pip][pypa-pip]:** `pip install treex-cli`
+- **[pipx][pypa-pipx]:** `pipx install treex-cli`
+- **[uv][uv-home]:** `uv tool install treex-cli`
+
+After installation, the `treex` command is available on your `PATH`.
 
 Prebuilt wheels are available for common platforms. See
 [Platform Support](#platform-support) for details.
@@ -185,5 +187,7 @@ For more information about installing Rust, see the
 [mit-license]: https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/LICENSE
 [pypi-files]: https://pypi.org/project/treex-cli/#files
 [pypi-home]: https://pypi.org/project/treex-cli
+[pypa-pip]: https://pip.pypa.io
+[pypa-pipx]: https://pipx.pypa.io
 [python-wheels]: https://packaging.python.org/en/latest/specifications/binary-distribution-format
 [rust-install]: https://www.rust-lang.org/tools/install
