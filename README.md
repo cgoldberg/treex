@@ -191,3 +191,4 @@ For more information about installing Rust, see the
 [pypa-pipx]: https://pipx.pypa.io
 [python-wheels]: https://packaging.python.org/en/latest/specifications/binary-distribution-format
 [rust-install]: https://www.rust-lang.org/tools/install
+[uv-home]: https://docs.astral.sh/uv
