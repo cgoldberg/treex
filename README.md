@@ -153,9 +153,11 @@ before `treex` receives them.
 
 ----
 
-## Screenshot
+## Demo
 
-![Screenshot](https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/screenshot.png)
+![Demo](https://raw.githubusercontent.com/cgoldberg/treex/refs/heads/main/demo.gif)
+
+----
 
 ## Platform support
 
