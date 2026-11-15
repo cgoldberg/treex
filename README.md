@@ -155,7 +155,9 @@ before `treex` receives them.
 
 ## Demo
 
-![Demo](https://github.com/cgoldberg/treex/blob/main/demo.gif?raw=true)
+<a href="https://github.com/cgoldberg/treex">
+  <img src="https://github.com/cgoldberg/treex/blob/main/demo.gif?raw=true">
+</a>
 
 ----
 
