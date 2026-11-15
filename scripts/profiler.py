@@ -6,7 +6,7 @@
 """Profile treex and display the top functions by cumulative runtime.
 
 Usage:
-    uv run python scripts/profile_treex.py [--show-output] [treex arguments]
+    uv run python scripts/profiler.py [--show-output] [treex arguments]
 
 By default, suppresses treex stdout while profiling. Use --show-output
 to display the tree as normal.
@@ -31,7 +31,6 @@ if __name__ == "__main__":
     show_output = "--show-output" in args
     if show_output:
         args.remove("--show-output")
-
     sys.argv = ["treex", *args]
     profiler = cProfile.Profile()
     if show_output:
