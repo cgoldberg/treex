@@ -677,7 +677,7 @@ wheels = [
 
 [[package]]
 name = "treex-cli"
-version = "0.2.6.dev0"
+version = "0.2.6"
 source = { editable = "." }
 
 [package.dev-dependencies]
