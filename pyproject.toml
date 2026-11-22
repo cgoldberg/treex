@@ -41,7 +41,7 @@ build = [
     "twine==7.0.0",
 ]
 lint = [
-    "ruff==0.17.5",
+    "ruff==0.17.6",
 ]
 test = [
     "pytest==9.2.0",
